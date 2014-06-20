@@ -41,9 +41,9 @@ first convert the value to a number (as is common with JS) and then
 coerce the value into the specified size:
 
 ```js
-    int8(128)   // returns 127
-    int8("128") // returns 127
-    int8(2.2)   // returns 2
+int8(128)   // returns 127
+int8("128") // returns 127
+int8(2.2)   // returns 2
 ```
 
 If you're familiar with C, these coercions are basically equivalent to
@@ -53,16 +53,16 @@ In some cases, coercions can throw. For example, in the case of
 `object`, the value being coerced must be an object or `null`:
 
 ```js
-    object("foo") // throws
-    object({})    // returns the object {}
-    object(null)  // returns null
+object("foo") // throws
+object({})    // returns the object {}
+object(null)  // returns null
 ```
 
 Finally, in the case of `any`, the coercion is a no-op, because any
 kind of value is acceptable:
 
 ```js
-    any(x) == x
+any(x) == x
 ```
 
 In this base spec, the set of primitive type definitions cannot be
@@ -75,7 +75,7 @@ You can define a new type definition using the `StructType`
 constructor:
 
 ```js
-    var PointType = new StructType({x: float64, y: float64})
+var PointType = new StructType({x: float64, y: float64})
 ```
 
 This defines a new type definition `PointType` that consists of two
@@ -110,7 +110,7 @@ example, if you make a JavaScript object using an expression like the
 following:
 
 ```js
-    var line = { from: { x: 3, y: 5 }, to: { x: 7, y: 8 } };
+var line = { from: { x: 3, y: 5 }, to: { x: 7, y: 8 } };
 ```
 
 you will create three objects, which means you have a memory
@@ -135,16 +135,16 @@ method that is defined on every other type definition object.  So for
 example an array of 32 points could be created like so:
 
 ```js
-    var PointArrayType = PointType.arrayType(32);
+var PointArrayType = PointType.arrayType(32);
 ```
     
 Arrays can be multidimensional, so for example you might define a type
 for a 1024x768 image like so:
 
 ```js
-    var ColorType = new StructType({r: uint8, g: uint8,
-                                    b: uint8, a: uint8});
-    var ImageType = ColorType.arrayType(1024).arrayType(768);
+var ColorType = new StructType({r: uint8, g: uint8,
+                                b: uint8, a: uint8});
+var ImageType = ColorType.arrayType(1024).arrayType(768);
 ```
     
 ## Typed objects: instantiating struct types
@@ -153,8 +153,8 @@ You can create an instance of a struct or array type using the `new`
 operator:
 
 ```js
-    var line = new LineType();
-    console.log(line.from.x); // logs 0
+var line = new LineType();
+console.log(line.from.x); // logs 0
 ```    
 
 The resulting object is called a *typed object*: it will have the
@@ -169,16 +169,16 @@ object". This object will be used to extract the initial values for
 each field:
 
 ```js
-    var line1 = new LineType({from: {x: 1, y: 2},
-                              to: {x: 3, y: 4}});
-    console.log(line1.from.x); // logs 1
+var line1 = new LineType({from: {x: 1, y: 2},
+                          to: {x: 3, y: 4}});
+console.log(line1.from.x); // logs 1
 
-    var line2 = new LineType(line1);
-    console.log(line2.from.x); // also logs 1
+var line2 = new LineType(line1);
+console.log(line2.from.x); // also logs 1
 
-    var PointsType = PointType.array(2);
-    var array = new PointsType([{x: 1, y: 2}, {x: 3, y: 4}]);
-    console.log(array[0].x); // ALSO logs 1
+var PointsType = PointType.array(2);
+var array = new PointsType([{x: 1, y: 2}, {x: 3, y: 4}]);
+console.log(array[0].x); // ALSO logs 1
 ```    
 
 As the example shows, the example object can be either a normal JS
@@ -187,17 +187,17 @@ fields (or elements, in the case of an array) of the appropriate
 type. Essentially, writing:
 
 ```js
-    var line1 = new LineType(example);
+var line1 = new LineType(example);
 ```
 
 is exactly equivalent to writing:
 
 ```js
-    var line1 = new LineType(example);
-    line1.from.x = example.from.x;
-    line1.from.y = example.from.y;
-    line1.from.x = example.to.x;
-    line1.from.y = example.to.y;
+var line1 = new LineType(example);
+line1.from.x = example.from.x;
+line1.from.y = example.from.y;
+line1.from.x = example.to.x;
+line1.from.y = example.to.y;
 ```
 
 #### Backing buffers
@@ -206,8 +206,8 @@ Conceptually at least, every typed object is actually a *view* onto a
 backing buffer. So if you create a line like:
 
 ```js
-    var line1 = new LineType({from: {x: 1, y: 2},
-                              to: {x: 3, y: 4}});
+var line1 = new LineType({from: {x: 1, y: 2},
+                          to: {x: 3, y: 4}});
 ```
 
 The result will be two objects as shown:
@@ -239,9 +239,9 @@ or array type, then the result is a new typed object pointer that points
 into the same backing buffer as before. Therefore, this fragment of code:
 
 ```js
-    var line1 = new LineType({from: {x: 1, y: 2},
-                              to: {x: 3, y: 4}});
-    var toPoint = line1.to;
+var line1 = new LineType({from: {x: 1, y: 2},
+                          to: {x: 3, y: 4}});
+var toPoint = line1.to;
 ```
 
 yields the following result:
