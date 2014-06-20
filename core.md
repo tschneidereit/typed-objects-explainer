@@ -130,11 +130,13 @@ default can save a significant amount of memory, particularly if you
 have a lot of large number of lines embedded in an array. It also
 improves cache behavior since the data is contiguous in memory.
 
-*NOTE:* Issue nikomatsakis/typed-objects-explainer#1 proposes to
-change some details of this section.
+*NOTE:*
+[Issue #1](https://github.com/nikomatsakis/typed-objects-explainer/issues/1)
+proposes to change some details of this section.
 
-*NOTE:* Issue nikomatsakis/typed-objects-explainer#2 proposes to
-change some details of this section.
+*NOTE:*
+[Issue #2](https://github.com/nikomatsakis/typed-objects-explainer/issues/2)
+proposes to change some details of this section.
 
 ### Array type definitions
 
@@ -424,6 +426,7 @@ classified as *opaque type definitions*. All instances of an opaque
 type definition are automatically opaque, and the `view` method on an
 opaque type definition throws an exception.
 
-*NOTE:* Issue nikomatsakis/typed-objects-explainer#2 proposes to
-change some details of this section.
+*NOTE:*
+[Issue #2](https://github.com/nikomatsakis/typed-objects-explainer/issues/2)
+proposes to change some details of this section.
 
