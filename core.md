@@ -369,6 +369,10 @@ map. Nonetheless, modeling the behavior as if the cache existed is
 useful because it tells us what should happen when a typed object is
 placed into a weakmap.
 
+## Prototypes
+
+FIXME
+
 # Interacting with array buffers
 
 In all the examples we have shown thus far, we have used the `new`
