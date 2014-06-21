@@ -3,6 +3,8 @@
 This is just a sketch, but the idea is to extend class type syntax to
 integrate with typed objects.
 
+*WARNING:* This is *very* preliminary and not fully thought through.
+
 ## Field types
 
 Allow users to declare field types. If any field types exist, this

@@ -1,6 +1,7 @@
 # Extensions to describe object-oriented languages
 
-This is just a sketch rather than a detailed writeup.
+This is just a sketch rather than a detailed writeup. The ideas are
+preliminary.
 
 ## Typed object references
 
