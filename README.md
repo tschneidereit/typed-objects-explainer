@@ -1,7 +1,7 @@
 # Typed Objects Explainer
 
 This is an effort to pull together and explain the various typed
-objects spec in an informal fashion. The expanations are divided into
+objects spec in an informal fashion. The explanations are divided into
 groups:
 
 - [Core](core.md) defines the core typed objects proposal.
@@ -9,7 +9,7 @@ groups:
   proposal to support new kinds of values, akin to numbers and
   strings.
 - [SIMD](simd.md) defines how the proposed SIMD spec fits into all this.
-- [OO types](ootypes.md) defines an extesion to allow
+- [OO types](ootypes.md) defines an extension to allow
   typed objects to (more) accurately describe the kinds of
   things one can describe in Java or C#.
 - [Class syntax](classsyntax.md) explores integration of typed objects
