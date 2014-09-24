@@ -31,7 +31,7 @@ primitive types:
     uint16 int16 float64 string
     uint32 int32         object
 
-These primitive type definitions repesent the various kinds of
+These primitive type definitions represent the various kinds of
 existing JS values. For example, the type `float64` describes a JS
 number, and `string` defines a JS string. The type `object` indicates
 a pointer to a JS object. Finally, `any` can be any kind of value
@@ -94,7 +94,7 @@ definitions:
 
     var LineType = new StructType({from: PointType, to: PointType});
 
-The result is a structure that containts two points embedded (again,
+The result is a structure that contains two points embedded (again,
 just as you would get in C):
 
     +==================+    --+ LineType
