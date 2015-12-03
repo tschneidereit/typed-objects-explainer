@@ -76,8 +76,24 @@ the mechanisms needed to support that.
 
 ### Struct type definitions
 
-You can define a new type definition using the `StructType`
-constructor:
+Struct types are defined using the `StructType` constructor. There are two overloads of that constructor:
+
+```js
+function StructType(structure, [options])
+function StructType(elementType, length, [options])
+```
+
+The first overload defines struct types with the fields given in `structure`.
+The second is a shortcut for defining struct types with indexed elements of a
+certain type: each entry is an instance of the struct type `elementType`, and
+the length is determined by `length`.
+
+In both cases, the optional `options` parameter, if provided, must be an
+object with options provided as named fields.
+
+#### Examples
+
+##### Standard structs
 
 ```js
 var PointType = new StructType({x: float64, y: float64});
@@ -92,16 +108,31 @@ struct would:
     | y: float64 |      |
     +============+    --+
 
-The `StructType` constructor takes an optional second parameter `options`, which, if provided, must be an object with options provided as named fields:
+##### Fixed-sized indexed structs
 
 ```js
-var PointType = new StructType({x: float64, y: float64}, {transparent: true});
+var LineType = new StructType(PointType, 2);
 ```
 
-See the section on opacity below for details on the `transparent` option.
+This defines a new type definition `LineType` that consists of two indexed
+elements, each an instance of `PointType`. These will be laid out in memory consecutively, just as a C struct would:
 
-Structure definitions can also reference other structure
-definitions:
+    +===============+    --+ LineType
+    | 0: x: float64 |      | --+ PointType
+    |    y: float64 |      | --+
+    | 1: x: float64 |      |
+    |    y: float64 |      |
+    +===============+    --+
+
+An equivalent definition to this, that'd become unwieldy for large `length`s, would be:
+
+```js
+var LineType = new StructType({0: PointType, 1: PointType});
+```
+
+##### Nested structs
+
+Struct types can embed other struct types both as indexed elements as above and as named fields:
 
 ```js
 var LineType = new StructType({from: PointType, to: PointType});
@@ -143,50 +174,52 @@ default can save a significant amount of memory, particularly if you
 have a lot of large number of lines embedded in an array. It also
 improves cache behavior since the data is contiguous in memory.
 
-*NOTE:*
-[Issue #1](https://github.com/nikomatsakis/typed-objects-explainer/issues/1)
-proposes to change some details of this section.
+##### Options
 
-### Array type definitions
+The `options` parameter can influence certain aspects of a struct's
+semantics. For now, `transparent` is the only option, see the section on
+opacity below for details.
 
-You can create a type definition for an array using the `arrayType`
-method that is defined on every other type definition object.  So for
-example an array of 32 points could be created like so:
+### Struct Arrays
 
-```js
-var PointArrayType = PointType.arrayType(32);
-```
-
-Arrays can be multidimensional, so for example you might define a type
-for a 1024x768 image like so:
+For each struct type, a dynamic array of instances of that type can be
+created using the type's `.array` constructor:
 
 ```js
-var ColorType = new StructType({r: uint8, g: uint8,
-                                b: uint8, a: uint8});
-var ImageType = ColorType.arrayType(1024).arrayType(768);
+const Point = new StructType({x: float64, y: float64});
+let points = new Point.array();
 ```
 
-*NOTE:* Issue nikomatsakis/typed-objects-explainer#1 proposes to
-change some details of this section.
+The `array` method supports the same overloads as the `Array` constructor:
+invoking it without arguments creates an empty array, invoking it with a single numeric argument creates an array with a length
+determined by that argument, every other combination of arguments uses the
+arguments to initialize elements in the instance:
+
+```js
+new Point.array(3); // [Point, Point, Point]
+new Point.array(p1, p2, {x: 10, y: 20}); // [Point, Point, Point]
+```
 
 ## Typed objects: instantiating struct types
 
-You can create an instance of a struct or array type using the `new`
+You can create an instance of a struct type using the `new`
 operator:
 
 ```js
-var line = new LineType();
+const PointType = new StructType({x: float64, y: float64});
+const LineType = new StructType({from: PointType, to: PointType});
+let line = new LineType();
 console.log(line.from.x); // logs 0
 ```
 
 The resulting object is called a *typed object*: it will have the
-fields specified in `LineType`. Each field will be initialized to an
+fields specified in `Line`. Each field will be initialized to an
 appropriate default value based on its type (e.g., numbers are
 initialized to 0, fields of type `any` are initialized to `undefined`,
 and so on). Fields with structural type (like `from` and `to` in this
 case) are recursively initialized.
 
-When creating a new typed object, you can also supply an "example
+When creating a new typed object, you can also supply a "source
 object". This object will be used to extract the initial values for
 each field:
 
@@ -198,15 +231,13 @@ console.log(line1.from.x); // logs 1
 var line2 = new LineType(line1);
 console.log(line2.from.x); // also logs 1
 
-var PointsType = PointType.array(2);
-var array = new PointsType([{x: 1, y: 2}, {x: 3, y: 4}]);
+var array = new PointType.array([{x: 1, y: 2}, {x: 3, y: 4}]);
 console.log(array[0].x); // ALSO logs 1
 ```
 
 As the example shows, the example object can be either a normal JS
 object or another typed object. The only requirement is that it have
-fields (or elements, in the case of an array) of the appropriate
-type. Essentially, writing:
+fields of the appropriate type. Essentially, writing:
 
 ```js
 var line1 = new LineType(example);
@@ -215,7 +246,7 @@ var line1 = new LineType(example);
 is exactly equivalent to writing:
 
 ```js
-var line1 = new LineType(example);
+var line1 = new LineType();
 line1.from.x = example.from.x;
 line1.from.y = example.from.y;
 line1.from.x = example.to.x;
@@ -244,7 +275,7 @@ The result will be two objects as shown:
 
 As you can see from the diagram, the typed object `line1` doesn't
 actually store any data itself. Instead, it is simply a pointer into a
-backing store (an array buffer, same as from typed arrays) that
+backing store (an `ArrayBuffer`, same as for typed arrays) that
 contains the data itself.
 
 *Efficiency note:* The spec has been designed so that, most of the
@@ -256,9 +287,9 @@ offset directly as synthetic local variables.
 ### Reading fields and elements
 
 When you access a field `f` of a typed object, the result depends on
-the type with which `f` was declared. If `f` was declared with struct
-or array type, then the result is a new typed object pointer that points
-into the same backing buffer as before. Therefore, this fragment of code:
+the type with which `f` was declared. If `f` was declared with struct type,
+then the result is a new typed object pointer that points into the same
+backing buffer as before. Therefore, this fragment of code:
 
 ```js
 var line1 = new LineType({from: {x: 1, y: 2},
@@ -283,25 +314,25 @@ before, but with a different offset. The offset is now 16, because it
 points at the `to` point (and each point consists of two `float64`s,
 which are 8 bytes each).
 
-Unlike arrays and structs, accessing a field of primitive type does
+Unlike for arrays and structs, accessing a field of primitive type does
 not return a typed object. Instead, it simply copies the value out
 from the array buffer and returns that. Therefore, `toPoint.x` yields
 the value `1`, not a pointer into the buffer.
 
-The rules for accessing array elements are the same as accessing
-fields of a struct. If for example you have a `uint8` array type like
-`uint8.arrayType(32)`, then `array[0]` will yield a number. If you
-have an array of structs or multidimensional array, then the result is
-a new typed object pointing into the same buffer, just as when accessing
-a struct field:
+The rules for accessing named and indexed properties of a struct are the same.
+If for example you have a `uint8` indexed struct type like
+`new StructType(uint8, 32)`, then `array[0]` will yield a number. If you
+have an array of structs, then the result is a new typed object pointing into
+the same buffer, just as when accessing a struct field:
 
 ```js
 var ColorType = new StructType({r: uint8, g: uint8,
                                 b: uint8, a: uint8});
-var ImageType = ColorType.arrayType(1024).arrayType(768);
+var ColumnType = new StructType(ColorType, 1024);
+var ImageType = new StructType(ColumnType, 768);
 
 var image = new ImageType();
-image[22] // yields a typed object of type ColorType.arrayType(1024)
+image[22] // yields a typed object of type ColumnType
 image[22][44] // yields a typed object of type ColorType
 image[22][44].r // yields a number
 ```
@@ -340,9 +371,9 @@ line.to = {x: float64(22), y: float64(44)};
 ### Canonicalization of typed objects / equality
 
 In a prior section, we said that accessing a field of a typed object
-will return a new typed object that shares the same backing buffer if
-the field has struct or array type. Based on this, you might wonder
-what happens if you access the same field twice in a row:
+will return a new typed object that shares the same backing buffer if the
+field has struct type. Based on this, you might wonder what happens if you
+access the same field twice in a row:
 
 ```js
 var line = new LineType({from: {x: 1, y: 2},
@@ -410,14 +441,14 @@ functions. (See section on opacity below):
 
 By default, struct types are opaque, meaning they don't allow access to
 the buffer onto which the struct instance is a view. This is a measure of
-protection, since otherwise passing a pointer to (say) an individual array
-element also provides access to the entire array.
+protection, since otherwise passing a pointer to (say) an individual nested
+struct also provides access to the entire outer struct.
 
 Sometimes, though, it's useful to allow accessing the underlying buffer. This can be enabled on a per-type basis using the `transparent` option:
 
 ```js
-var TransparentPoint = new StructType({x: float64, y: float64}, {transparent: true});
-var Point = new StructType({x: float64, y: float64});
+const TransparentPoint = new StructType({x: float64, y: float64}, {transparent: true});
+const Point = new StructType({x: float64, y: float64});
 var point = new TransparentPoint({x: 10, y: 100});
 var opaquePoint = Point.view(buffer(point), offset(point));
 
