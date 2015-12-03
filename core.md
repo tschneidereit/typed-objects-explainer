@@ -4,17 +4,20 @@
 
 The explainer proceeds as follows:
 
-- Explain type definitions:
-  - primitives
-  - structs
-  - arrays
-- Explain typed objects:
-  - instantiating structs and arrays
-  - backing buffers
-  - accessing fields of struct or array type
-  - prototypes
-- Interacting with array buffers
-  - Transparency and opacity
+- [Explain type definitions](#type-definition-objects):
+  - [primitives](#primitive-type-definitions)
+  - [structs](#struct-type-definitions)
+  - [arrays](#array-type-definitions)
+- [Explain typed objects](#typed-objects-instantiating-struct-types):
+  - [instantiating structs and arrays](#typed-objects-instantiating-struct-types)
+  - [backing buffers](#backing-buffers)
+  - [accessing fields of struct or array type](#reading-fields-and-elements)
+    - [reading fields](#reading-fields-and-elements)
+    - [assigning fields](#assigning-fields)
+  - [canonicalization and equality](#canonicalization-of-typed-objects--equality)
+  - [prototypes](#prototypes)
+- [Interacting with array buffers](#interacting-with-array-buffers)
+  - [Transparency and opacity](#opacity)
 
 ## Type definition objects
 
@@ -411,11 +414,11 @@ return `undefined` for the `buffer`, `offset`, and `length` funtions.
 
     var point = new Point();
     var point1 = opaque(point);
-    
+
     buffer(point)  // yields a buffer
     offset(point)  // yields 0
     length(point)  // yields 16
-    
+
     buffer(point1) // yields undefined
     offset(point1) // yields undefined
     length(point1) // yields undefined
@@ -433,4 +436,3 @@ opaque type definition throws an exception.
 *NOTE:*
 [Issue #2](https://github.com/nikomatsakis/typed-objects-explainer/issues/2)
 proposes to change some details of this section.
-
