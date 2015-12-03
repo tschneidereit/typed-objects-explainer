@@ -49,6 +49,8 @@ coerce the value into the specified size:
 int8(128)   // returns 127
 int8("128") // returns 127
 int8(2.2)   // returns 2
+int8({valueOf() {return "2.2"}}) // returns 2
+int8({}) // returns 0, because Number({}) results in NaN, which is replaced with the default value 0.
 ```
 
 If you're familiar with C, these coercions are basically equivalent to
@@ -67,7 +69,7 @@ Finally, in the case of `any`, the coercion is a no-op, because any
 kind of value is acceptable:
 
 ```js
-any(x) == x
+any(x) === x
 ```
 
 In this base spec, the set of primitive type definitions cannot be
