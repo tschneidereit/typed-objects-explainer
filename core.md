@@ -85,9 +85,12 @@ function StructType(structure, [options])
 function StructType(elementType, length, [options])
 ```
 
-The first overload defines struct types with the fields given in `structure`.
-The second is a shortcut for defining struct types with indexed elements of a
-certain type: each entry is an instance of the struct type `elementType`, and
+The first overload defines struct types with the fields given in `structure`. The
+`structure` argument must recursively consist of fields whose values are type
+definitions: either primitive or struct type definitions.
+
+The second overload is a shortcut for defining struct types with indexed elements
+of a certain type: each entry is an instance of the struct type `elementType`, and
 the length is determined by `length`.
 
 In both cases, the optional `options` parameter, if provided, must be an
