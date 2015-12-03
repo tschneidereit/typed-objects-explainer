@@ -96,7 +96,7 @@ object with options provided as named fields.
 ##### Standard structs
 
 ```js
-var PointType = new StructType({x: float64, y: float64});
+const PointType = new StructType({x: float64, y: float64});
 ```
 
 This defines a new type definition `PointType` that consists of two
@@ -111,7 +111,7 @@ struct would:
 ##### Fixed-sized indexed structs
 
 ```js
-var LineType = new StructType(PointType, 2);
+const LineType = new StructType(PointType, 2);
 ```
 
 This defines a new type definition `LineType` that consists of two indexed
@@ -127,7 +127,7 @@ elements, each an instance of `PointType`. These will be laid out in memory cons
 An equivalent definition to this, that'd become unwieldy for large `length`s, would be:
 
 ```js
-var LineType = new StructType({0: PointType, 1: PointType});
+const LineType = new StructType({0: PointType, 1: PointType});
 ```
 
 ##### Nested structs
@@ -135,7 +135,7 @@ var LineType = new StructType({0: PointType, 1: PointType});
 Struct types can embed other struct types both as indexed elements as above and as named fields:
 
 ```js
-var LineType = new StructType({from: PointType, to: PointType});
+const LineType = new StructType({from: PointType, to: PointType});
 ```
 
 The result is a structure that contains two points embedded (again,
@@ -156,7 +156,7 @@ example, if you make a JavaScript object using an expression like the
 following:
 
 ```js
-var line = { from: { x: 3, y: 5 }, to: { x: 7, y: 8 } };
+let line = { from: { x: 3, y: 5 }, to: { x: 7, y: 8 } };
 ```
 
 you will create three objects, which means you have a memory
@@ -224,14 +224,14 @@ object". This object will be used to extract the initial values for
 each field:
 
 ```js
-var line1 = new LineType({from: {x: 1, y: 2},
+let line1 = new LineType({from: {x: 1, y: 2},
                           to: {x: 3, y: 4}});
 console.log(line1.from.x); // logs 1
 
-var line2 = new LineType(line1);
+let line2 = new LineType(line1);
 console.log(line2.from.x); // also logs 1
 
-var array = new PointType.array([{x: 1, y: 2}, {x: 3, y: 4}]);
+let array = new PointType.array([{x: 1, y: 2}, {x: 3, y: 4}]);
 console.log(array[0].x); // ALSO logs 1
 ```
 
@@ -240,13 +240,13 @@ object or another typed object. The only requirement is that it have
 fields of the appropriate type. Essentially, writing:
 
 ```js
-var line1 = new LineType(example);
+let line1 = new LineType(example);
 ```
 
 is exactly equivalent to writing:
 
 ```js
-var line1 = new LineType();
+let line1 = new LineType();
 line1.from.x = example.from.x;
 line1.from.y = example.from.y;
 line1.from.x = example.to.x;
@@ -259,7 +259,7 @@ Conceptually at least, every typed object is actually a *view* onto a
 backing buffer. So if you create a line like:
 
 ```js
-var line1 = new LineType({from: {x: 1, y: 2},
+let line1 = new LineType({from: {x: 1, y: 2},
                           to: {x: 3, y: 4}});
 ```
 
@@ -292,9 +292,9 @@ then the result is a new typed object pointer that points into the same
 backing buffer as before. Therefore, this fragment of code:
 
 ```js
-var line1 = new LineType({from: {x: 1, y: 2},
+let line1 = new LineType({from: {x: 1, y: 2},
                           to: {x: 3, y: 4}});
-var toPoint = line1.to;
+let toPoint = line1.to;
 ```
 
 yields the following result:
@@ -326,12 +326,12 @@ have an array of structs, then the result is a new typed object pointing into
 the same buffer, just as when accessing a struct field:
 
 ```js
-var ColorType = new StructType({r: uint8, g: uint8,
-                                b: uint8, a: uint8});
-var ColumnType = new StructType(ColorType, 1024);
-var ImageType = new StructType(ColumnType, 768);
+const ColorType = new StructType({r: uint8, g: uint8,
+                                  b: uint8, a: uint8});
+const ColumnType = new StructType(ColorType, 1024);
+const ImageType = new StructType(ColumnType, 768);
 
-var image = new ImageType();
+let image = new ImageType();
 image[22] // yields a typed object of type ColumnType
 image[22][44] // yields a typed object of type ColorType
 image[22][44].r // yields a number
@@ -344,7 +344,7 @@ The process is precisely the same as when providing an initial value
 for a typed object. This means that you can write things like:
 
 ```js
-var line = new LineType();
+let line = new LineType();
 line.to = {x: 22, y: 44};
 console.log(line.from.x); // prints 0
 console.log(line.to.x); // prints 22
@@ -376,10 +376,10 @@ field has struct type. Based on this, you might wonder what happens if you
 access the same field twice in a row:
 
 ```js
-var line = new LineType({from: {x: 1, y: 2},
+let line = new LineType({from: {x: 1, y: 2},
                          to: {x: 3, y: 4}});
-var toPoint1 = line.to;
-var toPoint2 = line.to;
+let toPoint1 = line.to;
+let toPoint2 = line.to;
 ```
 
 The answer is that each time you access the same field, you get back
@@ -423,8 +423,8 @@ typed view onto its contents. That can be achieved using the `view`
 method offered by struct and array type definitions:
 
 ```js
-var buffer = new ArrayBuffer(...);
-var line = LineType.view(buffer, offset);
+let buffer = new ArrayBuffer(...);
+let line = LineType.view(buffer, offset);
 ```
 
 You can also obtain information about the backing buffer from an existing
@@ -449,8 +449,8 @@ Sometimes, though, it's useful to allow accessing the underlying buffer. This ca
 ```js
 const TransparentPoint = new StructType({x: float64, y: float64}, {transparent: true});
 const Point = new StructType({x: float64, y: float64});
-var point = new TransparentPoint({x: 10, y: 100});
-var opaquePoint = Point.view(buffer(point), offset(point));
+let point = new TransparentPoint({x: 10, y: 100});
+let opaquePoint = Point.view(buffer(point), offset(point));
 
 buffer(opaquePoint); // yields undefined
 offset(opaquePoint); // yields undefined
