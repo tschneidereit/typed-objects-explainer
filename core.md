@@ -80,7 +80,7 @@ You can define a new type definition using the `StructType`
 constructor:
 
 ```js
-var PointType = new StructType({x: float64, y: float64})
+var PointType = new StructType({x: float64, y: float64});
 ```
 
 This defines a new type definition `PointType` that consists of two
@@ -92,10 +92,20 @@ struct would:
     | y: float64 |      |
     +============+    --+
 
+The `StructType` constructor takes an optional second parameter `options`, which, if provided, must be an object with options provided as named fields:
+
+```js
+var PointType = new StructType({x: float64, y: float64}, {transparent: true});
+```
+
+See the section on opacity below for details on the `transparent` option.
+
 Structure definitions can also reference other structure
 definitions:
 
-    var LineType = new StructType({from: PointType, to: PointType});
+```js
+var LineType = new StructType({from: PointType, to: PointType});
+```
 
 The result is a structure that contains two points embedded (again,
 just as you would get in C):
@@ -135,10 +145,6 @@ improves cache behavior since the data is contiguous in memory.
 
 *NOTE:*
 [Issue #1](https://github.com/nikomatsakis/typed-objects-explainer/issues/1)
-proposes to change some details of this section.
-
-*NOTE:*
-[Issue #2](https://github.com/nikomatsakis/typed-objects-explainer/issues/2)
 proposes to change some details of this section.
 
 ### Array type definitions
@@ -385,12 +391,14 @@ though, it can be useful to take an existing array buffer and create a
 typed view onto its contents. That can be achieved using the `view`
 method offered by struct and array type definitions:
 
-    var buffer = new ArrayBuffer(...);
-    var line = LineType.view(buffer, offset);
+```js
+var buffer = new ArrayBuffer(...);
+var line = LineType.view(buffer, offset);
+```
 
-You can also obtain information about the backing buffer from an
-existing typed object by using the `buffer`, `position`, and `length`
-functions (but see section on opacity below):
+You can also obtain information about the backing buffer from an existing
+transparent typed object by using the `buffer`, `position`, and `length`
+functions. (See section on opacity below):
 
 - `buffer(typedObj)`: returns the buffer for typed object
 - `offset(typedObj)`: returns the offset of the typed object's data
@@ -400,39 +408,27 @@ functions (but see section on opacity below):
 
 ## Opacity
 
-Sometimes it is useful to be able to prevent others from gaining
-access to the buffer in which a typed object is stored. This can
-provide a measure of protection, since otherwise passing a pointer to
-(say) an individual array element also provides access to the entire
-array.
+By default, struct types are opaque, meaning they don't allow access to
+the buffer onto which the struct instance is a view. This is a measure of
+protection, since otherwise passing a pointer to (say) an individual array
+element also provides access to the entire array.
 
-To this end, any typed object can be converted into an opaque typed
-object using the `opaque` function. This function returns a new typed
-object that points at the same buffer but is opaque (the input object
-is not modified and remains transparent). Opaque typed objects always
-return `undefined` for the `buffer`, `offset`, and `length` funtions.
+Sometimes, though, it's useful to allow accessing the underlying buffer. This can be enabled on a per-type basis using the `transparent` option:
 
-    var point = new Point();
-    var point1 = opaque(point);
+```js
+var TransparentPoint = new StructType({x: float64, y: float64}, {transparent: true});
+var Point = new StructType({x: float64, y: float64});
+var point = new TransparentPoint({x: 10, y: 100});
+var opaquePoint = Point.view(buffer(point), offset(point));
 
-    buffer(point)  // yields a buffer
-    offset(point)  // yields 0
-    length(point)  // yields 16
+buffer(opaquePoint); // yields undefined
+offset(opaquePoint); // yields undefined
+length(opaquePoint); // yields undefined
+```
 
-    buffer(point1) // yields undefined
-    offset(point1) // yields undefined
-    length(point1) // yields undefined
-
-### Opaque types
-
-For types that contain object or string pointers, opacity is more than
-a convenience, it's a security necessity. If users could gain access
-to the backing buffer, then they could synthesize fake pointers and
-hack the system. Therefore, type definitions that contain pointers are
-classified as *opaque type definitions*. All instances of an opaque
-type definition are automatically opaque, and the `view` method on an
-opaque type definition throws an exception.
-
-*NOTE:*
-[Issue #2](https://github.com/nikomatsakis/typed-objects-explainer/issues/2)
-proposes to change some details of this section.
+Not all struct types can be made transparent, though: for types that
+contain object or string pointers, opacity is a security necessity. If users
+could gain access to the backing buffer, then they could synthesize fake
+pointers and hack the system. Therefore, setting the `transparent` option
+when defining a type containing `object` or `string` pointers or `any` fields
+throws an exception.
