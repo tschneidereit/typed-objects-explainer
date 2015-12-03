@@ -411,13 +411,32 @@ placed into a weakmap.
 
 ## Prototypes
 
-FIXME
+All typed objects have an accompanying `prototype`. The `[[Prototype]]` of new instances of a type is set to that `prototype`. For struct types, the `prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The `[[Prototype]]` of arrays of a struct type `Point`, instantiated using `new Point.array()`, is set to `Point.array.prototype`. That object's own `[[Prototype]]` is set to `StructType.array.prototype`.
+
+In code:
+
+```js
+const Point({x: float64, y: float64});
+const Line({start: Point, end: Point});
+let point = new Point();
+let points1 = new Point.array(2);
+let points2 = new Point.array(5);
+let line = new Line();
+// These all yield `true`:
+point.__proto__ === Point.prototype;
+points1.__proto__ === Point.array.prototype;
+points2.__proto__ === points1.__proto__;
+Point.prototype.__proto__ === StructType.prototype;
+Point.array.prototype.__proto__ === StructType.array.prototype;
+line.__proto__ === Line.prototype;
+line.start.__proto__ === Point.prototype;
+```
 
 # Interacting with array buffers
 
 In all the examples we have shown thus far, we have used the `new`
-constructor to create instances of struct or array type definitions,
-which in turn implies that we create a new backing buffer. Sometimes,
+constructor to create instances of struct type definitions or their accompanying
+array types, which in turn implies that we create a new backing buffer. Sometimes,
 though, it can be useful to take an existing array buffer and create a
 typed view onto its contents. That can be achieved using the `view`
 method offered by struct and array type definitions:
