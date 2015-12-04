@@ -277,7 +277,7 @@ which are 8 bytes each).
 Unlike arrays and structs, accessing a field of primitive type does
 not return a typed object. Instead, it simply copies the value out
 from the array buffer and returns that. Therefore, `toPoint.x` yields
-the value `1`, not a pointer into the buffer.
+the value `3`, not a pointer into the buffer.
 
 The rules for accessing array elements are the same as accessing
 fields of a struct. If for example you have a `uint8` array type like
