@@ -116,13 +116,13 @@ struct would:
 ##### Fixed-sized indexed structs
 
 ```js
-const LineType = new StructType(PointType, 2);
+const PointPairType = new StructType(PointType, 2);
 ```
 
 This defines a new type definition `LineType` that consists of two indexed
 elements, each an instance of `PointType`. These will be laid out in memory consecutively, just as a C struct would:
 
-    +===============+    --+ LineType
+    +===============+    --+ PointPairType
     | 0: x: float64 |      | --+ PointType
     |    y: float64 |      | --+
     | 1: x: float64 |      |
@@ -132,7 +132,7 @@ elements, each an instance of `PointType`. These will be laid out in memory cons
 An equivalent definition to this, that'd become unwieldy for large `length`s, would be:
 
 ```js
-const LineType = new StructType({0: PointType, 1: PointType});
+const PointPairType = new StructType({0: PointType, 1: PointType, length: 2});
 ```
 
 ##### Nested structs
@@ -191,8 +191,8 @@ For each struct type, a dynamic array of instances of that type can be
 created using the type's `.array` constructor:
 
 ```js
-const Point = new StructType({x: float64, y: float64});
-let points = new Point.array();
+const PointType = new StructType({x: float64, y: float64});
+let points = new PointType.array();
 ```
 
 The `array` method supports the same overloads as the `Array` constructor:
@@ -218,7 +218,7 @@ console.log(line.from.x); // logs 0
 ```
 
 The resulting object is called a *typed object*: it will have the
-fields specified in `Line`. Each field will be initialized to an
+fields specified in `LineType`. Each field will be initialized to an
 appropriate default value based on its type (e.g., numbers are
 initialized to 0, fields of type `any` are initialized to `undefined`,
 and so on). Fields with structural type (like `from` and `to` in this
@@ -235,9 +235,6 @@ console.log(line1.from.x); // logs 1
 
 let line2 = new LineType(line1);
 console.log(line2.from.x); // also logs 1
-
-let array = new PointType.array([{x: 1, y: 2}, {x: 3, y: 4}]);
-console.log(array[0].x); // ALSO logs 1
 ```
 
 As the example shows, the example object can be either a normal JS
@@ -319,7 +316,7 @@ before, but with a different offset. The offset is now 16, because it
 points at the `to` point (and each point consists of two `float64`s,
 which are 8 bytes each).
 
-Unlike for arrays and structs, accessing a field of primitive type does
+Unlike for structs, accessing a field of primitive type does
 not return a typed object. Instead, it simply copies the value out
 from the array buffer and returns that. Therefore, `toPoint.x` yields
 the value `1`, not a pointer into the buffer.
@@ -416,25 +413,25 @@ placed into a weakmap.
 
 ## Prototypes
 
-All typed objects have an accompanying `prototype`. The `[[Prototype]]` of new instances of a type is set to that `prototype`. For struct types, the `prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The `[[Prototype]]` of arrays of a struct type `Point`, instantiated using `new Point.array()`, is set to `Point.array.prototype`. That object's own `[[Prototype]]` is set to `StructType.array.prototype`.
+All typed object constructors have an accompanying `prototype`. The `[[Prototype]]` of new instances of a type is set to that `prototype`. For struct types, the `prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The `[[Prototype]]` of arrays of a struct type `PointType`, instantiated using `new PointType.array()`, is set to `PointType.array.prototype`. That object's own `[[Prototype]]` is set to `StructType.array.prototype`.
 
 In code:
 
 ```js
-const Point({x: float64, y: float64});
-const Line({start: Point, end: Point});
-let point = new Point();
-let points1 = new Point.array(2);
-let points2 = new Point.array(5);
-let line = new Line();
+const PointType = new StructType({x: float64, y: float64});
+const LineType = new StructType({from: Point, to: Point});
+let point = new PointType();
+let points1 = new PointType.array(2);
+let points2 = new PointType.array(5);
+let line = new LineType();
 // These all yield `true`:
-point.__proto__ === Point.prototype;
-points1.__proto__ === Point.array.prototype;
+point.__proto__ === PointType.prototype;
+points1.__proto__ === PointType.array.prototype;
 points2.__proto__ === points1.__proto__;
-Point.prototype.__proto__ === StructType.prototype;
-Point.array.prototype.__proto__ === StructType.array.prototype;
-line.__proto__ === Line.prototype;
-line.start.__proto__ === Point.prototype;
+PointType.prototype.__proto__ === StructType.prototype;
+PointType.array.prototype.__proto__ === StructType.array.prototype;
+line.__proto__ === LineType.prototype;
+line.from.__proto__ === PointType.prototype;
 ```
 
 # Interacting with array buffers
@@ -450,6 +447,8 @@ method offered by struct and array type definitions:
 let buffer = new ArrayBuffer(...);
 let line = LineType.view(buffer, offset);
 ```
+
+Note that this only works for transparent typed object types. See [the following section on opacity](#opacity) for details.
 
 You can also obtain information about the backing buffer from an existing
 transparent typed object by using the `buffer`, `position`, and `length`
@@ -471,14 +470,28 @@ struct also provides access to the entire outer struct.
 Sometimes, though, it's useful to allow accessing the underlying buffer. This can be enabled on a per-type basis using the `transparent` option:
 
 ```js
-const TransparentPoint = new StructType({x: float64, y: float64}, {transparent: true});
-const Point = new StructType({x: float64, y: float64});
-let point = new TransparentPoint({x: 10, y: 100});
-let opaquePoint = Point.view(buffer(point), offset(point));
+const PointType = new StructType({x: float64, y: float64}, {transparent: true});
+const PointPairType = new StructType(PointType, 2, {transparent: true});
+const LineType = new StructType({from: PointType, to: PointType}, {transparent: true});
+let pointPair = new PointPairType({x: 10, y: 10}, {x: 20, y: 20});
+let line = LineType.view(buffer(pointPair), offset(pointPair));
+let toPoint = PointType.view(buffer(line), offset(pointPair[1]));
+let floatsList = new Float64Array(buffer(line));
 
-buffer(opaquePoint); // yields undefined
-offset(opaquePoint); // yields undefined
-length(opaquePoint); // yields undefined
+// These all yield true:
+buffer(pointPair) === buffer(line) === buffer(fromPoint) === floatsList.buffer;
+offset(pointPair) === offset(line) === floatsList.byteOffset;
+offset(toPoint) === offset(line.to) === offset(pointPair[1]);
+
+pointPair[1].x === 20;
+line.to.x === 20;
+toPoint.x === 20;
+floatsList[3] === 20;
+
+toPoint.x = 100;
+pointPair[1].x === 100;
+line.to.x === 100;
+floatsList[3] === 100;
 ```
 
 Not all struct types can be made transparent, though: for types that
@@ -486,4 +499,6 @@ contain object or string pointers, opacity is a security necessity. If users
 could gain access to the backing buffer, then they could synthesize fake
 pointers and hack the system. Therefore, setting the `transparent` option
 when defining a type containing `object` or `string` pointers or `any` fields
-throws an exception.
+throws an exception. For the same reason, it's not possible to use the `view`
+static method on opaque struct type constructors to create a view onto a
+preexisting buffer.
