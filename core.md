@@ -7,11 +7,12 @@ The explainer proceeds as follows:
 - [Explain type definitions](#type-definition-objects):
   - [primitives](#primitive-type-definitions)
   - [structs](#struct-type-definitions)
-  - [arrays](#array-type-definitions)
-- [Explain typed objects](#typed-objects-instantiating-struct-types):
-  - [instantiating structs and arrays](#typed-objects-instantiating-struct-types)
+    - [options](#options)
+  - [Typed Object Arrays](#typed-object-arrays)
+- [Explain typed objects](#instantiating-struct-types):
+  - [instantiating struct types](#instantiating-struct-types)
   - [backing buffers](#backing-buffers)
-  - [accessing fields of struct or array type](#reading-fields-and-elements)
+  - [accessing fields and elements of structs](#reading-fields-and-elements)
     - [reading fields](#reading-fields-and-elements)
     - [assigning fields](#assigning-fields)
   - [canonicalization and equality](#canonicalization-of-typed-objects--equality)
@@ -185,9 +186,9 @@ The `options` parameter can influence certain aspects of a struct's
 semantics. For now, `transparent` is the only option, see the section on
 opacity below for details.
 
-### Struct Arrays
+### Typed Object Arrays
 
-For each struct type, a dynamic array of instances of that type can be
+For each type definition, a dynamic array of instances of that type can be
 created using the type's `.array` constructor:
 
 ```js
@@ -195,17 +196,14 @@ const PointType = new StructType({x: float64, y: float64});
 let points = new PointType.array();
 ```
 
-The `array` method supports the same overloads as the `Array` constructor:
-invoking it without arguments creates an empty array, invoking it with a single numeric argument creates an array with a length
-determined by that argument, every other combination of arguments uses the
-arguments to initialize elements in the instance:
+A type definition's `.array` constructor supports the same overloads as the global `Array` constructor: invoking it without arguments creates an empty array, invoking it with a single numeric argument creates an array with a length determined by that argument, every other combination of arguments uses the arguments to initialize elements in the instance:
 
 ```js
-new Point.array(3); // [Point, Point, Point]
-new Point.array(p1, p2, {x: 10, y: 20}); // [Point, Point, Point]
+new PointType.array(3); // [PointType, PointType, PointType]
+new PointType.array(p1, p2, {x: 10, y: 20}); // [PointType, PointType, PointType]
 ```
 
-## Typed objects: instantiating struct types
+## Instantiating struct types
 
 You can create an instance of a struct type using the `new`
 operator:
@@ -257,8 +255,9 @@ line1.from.y = example.to.y;
 
 ### Backing buffers
 
-Conceptually at least, every typed object is actually a *view* onto a
-backing buffer. So if you create a line like:
+Conceptually at least, every typed object is actually a *view* onto an
+`ArrayBuffer` backing buffer, just as is the case for typed arrays. Say you
+create a line like:
 
 ```js
 let line1 = new LineType({from: {x: 1, y: 2},
@@ -277,8 +276,7 @@ The result will be two objects as shown:
 
 As you can see from the diagram, the typed object `line1` doesn't
 actually store any data itself. Instead, it is simply a pointer into a
-backing store (an `ArrayBuffer`, same as for typed arrays) that
-contains the data itself.
+backing store that contains the data itself.
 
 *Efficiency note:* The spec has been designed so that, most of the
 time, engines only have to create the backing buffer object and not
@@ -413,7 +411,7 @@ placed into a weakmap.
 
 ## Prototypes
 
-All typed object constructors have an accompanying `prototype`. The `[[Prototype]]` of new instances of a type is set to that `prototype`. For struct types, the `prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The `[[Prototype]]` of arrays of a struct type `PointType`, instantiated using `new PointType.array()`, is set to `PointType.array.prototype`. That object's own `[[Prototype]]` is set to `StructType.array.prototype`.
+All type definitions have an accompanying `prototype`. The `[[Prototype]]` of new instances of a type is set to that `prototype`. For struct type definitions, the `prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The `[[Prototype]]` of arrays of a struct type `PointType`, instantiated using `new PointType.array()`, is set to `PointType.array.prototype`. That object's own `[[Prototype]]` is set to `StructType.array.prototype`. Finally, the `[[Prototype]]` of `StructType.array.prototype` is immutably set to `Array.prototype`. I.e., typed object arrays are subclasses of `Array`.
 
 In code:
 
@@ -430,6 +428,7 @@ points1.__proto__ === PointType.array.prototype;
 points2.__proto__ === points1.__proto__;
 PointType.prototype.__proto__ === StructType.prototype;
 PointType.array.prototype.__proto__ === StructType.array.prototype;
+StructType.array.prototype.__proto__ === Array.prototype;
 line.__proto__ === LineType.prototype;
 line.from.__proto__ === PointType.prototype;
 ```
@@ -448,13 +447,13 @@ let buffer = new ArrayBuffer(...);
 let line = LineType.view(buffer, offset);
 ```
 
-Note that this only works for transparent typed object types. See [the following section on opacity](#opacity) for details.
+Note that this only works for transparent struct type definitions. See [the following section on opacity](#opacity) for details.
 
 You can also obtain information about the backing buffer from an existing
 transparent typed object by using the `buffer`, `position`, and `length`
 functions. (See section on opacity below):
 
-- `buffer(typedObj)`: returns the buffer for typed object
+- `buffer(typedObj)`: returns the buffer for the typed object
 - `offset(typedObj)`: returns the offset of the typed object's data
   within its buffer
 - `length(typedObj)`: returns the length of the typed object's data
@@ -494,7 +493,7 @@ line.to.x === 100;
 floatsList[3] === 100;
 ```
 
-Not all struct types can be made transparent, though: for types that
+Not all struct types can be made transparent: for types that
 contain object or string pointers, opacity is a security necessity. If users
 could gain access to the backing buffer, then they could synthesize fake
 pointers and hack the system. Therefore, setting the `transparent` option
