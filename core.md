@@ -374,6 +374,23 @@ console.log(line.from.x); // prints 0
 console.log(line.to.x); // prints 22
 ```
 
+When assigning to a field that has a struct type, the assigned value must be an object
+(or a typed object) with the right structure: it must recursively contain at least all
+properties the target field's type has; otherwise, a `TypeError` is thrown:
+
+```js
+let line = new LineType();
+line.to = {x: 22, y: 44}; // Ok.
+line.to = {x: 22, y: 44, z: 88}; // Ok.
+line.to = {x: 22}; // Throws.
+```
+
+The rationale for this behavior is that both alternatives - leaving absent fields
+unchanged or resetting them to their default values - are very likely to cover up
+subtle bugs. This is especially true when gradually converting an existing code base
+to using typed objects. OTOH, ignoring additional fields on the source object doesn't
+have the same issues: all fields on the target instance are set to predictable values.
+
 If a field has primitive type, then when it is assigned, the value is
 transformed in the same way that it would be if you invoked the type
 definition to "cast" the value. Hence all of the following ways to
