@@ -11,6 +11,7 @@ The explainer proceeds as follows:
   - [Typed Object Arrays](#typed-object-arrays)
 - [Explain typed objects](#instantiating-struct-types):
   - [instantiating struct types](#instantiating-struct-types)
+  - [instantiating struct type arrays](#instantiating-struct-type-arrays)
   - [backing buffers](#backing-buffers)
   - [accessing fields and elements of structs](#reading-fields-and-elements)
     - [reading fields](#reading-fields-and-elements)
@@ -97,6 +98,22 @@ the length is determined by `length`.
 In both cases, the optional `options` parameter, if provided, must be an
 object with options provided as named fields.
 
+### Struct arrays
+
+In addition to the indexed structs described above, which each have their own nominal
+type and `prototype`, each struct type has an accompanying `array` constructor which
+can be used to create fixed-sized typed arrays of elements of the struct's type.
+Just as for the existing typed Arrays such as `Uint8Array`, instances of these arrays
+all share the same nominal type and `prototype`, regardless of the length.
+
+```js
+const PointType = new StructType({x: float64, y: float64});
+let points = new PointType.array(10);
+```
+
+For the full set of overloads of the `array` constructor see the [section on
+instantiating struct type arrays]() below.
+
 #### Examples
 
 ##### Standard structs
@@ -114,7 +131,7 @@ struct would:
     | y: float64 |      |
     +============+    --+
 
-##### Fixed-sized indexed structs
+##### Indexed structs
 
 ```js
 const PointPairType = new StructType(PointType, 2);
@@ -186,24 +203,9 @@ The `options` parameter can influence certain aspects of a struct's
 semantics. For now, `transparent` is the only option, see the section on
 opacity below for details.
 
-### Typed Object Arrays
+## Instantiation
 
-For each type definition, a dynamic array of instances of that type can be
-created using the type's `.array` constructor:
-
-```js
-const PointType = new StructType({x: float64, y: float64});
-let points = new PointType.array();
-```
-
-A type definition's `.array` constructor supports the same overloads as the global `Array` constructor: invoking it without arguments creates an empty array, invoking it with a single numeric argument creates an array with a length determined by that argument, every other combination of arguments uses the arguments to initialize elements in the instance:
-
-```js
-new PointType.array(3); // [PointType, PointType, PointType]
-new PointType.array(p1, p2, {x: 10, y: 20}); // [PointType, PointType, PointType]
-```
-
-## Instantiating struct types
+### Instantiating struct types
 
 You can create an instance of a struct type using the `new`
 operator:
@@ -251,6 +253,28 @@ line1.from.x = example.from.x;
 line1.from.y = example.from.y;
 line1.from.x = example.to.x;
 line1.from.y = example.to.y;
+```
+
+### Instantiating struct type arrays
+
+For each type definition, a fixed-sized typed array of instances of that type can be
+created using the type's `.array` constructor.
+
+Just as typed array constructors, typed object array constructors support four
+different overloads:
+
+```js
+const PointType = new StructType({x: float64, y: float64});
+// Creates an instance of length 10, with all entries initialized to default values.
+let points = new PointType.array(10);
+// Creates a copy of `points`.
+let pointsCopy = new PointType.array(points);
+// Creates an instance by iterating over the array-like or iterable source and
+// creating instances of `PointType` for all encountered items.
+let coercedPoints = new PointType.array([new PointType(1, 2), new PointType(10, 20)]);
+// Creates an instance as a view onto the given buffer, starting at the given
+// offset and with the given length, both of which are optional.
+let pointsView = new PointType.array(buffer(points), 3, 3);
 ```
 
 ### Backing buffers
@@ -411,7 +435,14 @@ placed into a weakmap.
 
 ## Prototypes
 
-All type definitions have an accompanying `prototype`. The `[[Prototype]]` of new instances of a type is set to that `prototype`. For struct type definitions, the `prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The `[[Prototype]]` of arrays of a struct type `PointType`, instantiated using `new PointType.array()`, is set to `PointType.array.prototype`. That object's own `[[Prototype]]` is set to `StructType.array.prototype`. Finally, the `[[Prototype]]` of `StructType.array.prototype` is immutably set to `Array.prototype`. I.e., typed object arrays are subclasses of `Array`.
+All type definitions have an accompanying `prototype`. The `[[Prototype]]` of new
+instances of a type is set to that `prototype`. For struct type definitions, the
+`prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The
+`[[Prototype]]` of arrays of a struct type `PointType`, instantiated using `new
+PointType.array()`, is set to `PointType.array.prototype`. That object's own
+`[[Prototype]]` is set to `StructType.array.prototype`. Finally, the `[[Prototype]]` of
+`StructType.array.prototype` is immutably set to `%TypedArray%.prototype`. I.e., struct
+type arrays are subclasses of `TypedArray`, just as typed arrays are.
 
 In code:
 
@@ -428,7 +459,7 @@ points1.__proto__ === PointType.array.prototype;
 points2.__proto__ === points1.__proto__;
 PointType.prototype.__proto__ === StructType.prototype;
 PointType.array.prototype.__proto__ === StructType.array.prototype;
-StructType.array.prototype.__proto__ === Array.prototype;
+StructType.array.prototype.__proto__ === Uint8Array.prototype.__proto__;
 line.__proto__ === LineType.prototype;
 line.from.__proto__ === PointType.prototype;
 ```
@@ -439,8 +470,9 @@ In all the examples we have shown thus far, we have used the `new`
 constructor to create instances of struct type definitions or their accompanying
 array types, which in turn implies that we create a new backing buffer. Sometimes,
 though, it can be useful to take an existing array buffer and create a
-typed view onto its contents. That can be achieved using the `view`
-method offered by struct and array type definitions:
+typed view onto its contents. For struct type arrays that is done using the overload
+that takes a buffer and, optionally and offset and a length. For struct types
+themselves, it can be achieved using the `view` method on the type definition:
 
 ```js
 let buffer = new ArrayBuffer(...);
