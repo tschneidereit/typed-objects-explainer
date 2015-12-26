@@ -109,7 +109,7 @@ of a certain type: each entry is an instance of the struct type `elementType`, a
 the length is determined by `length`.
 
 In both cases, the optional `options` parameter, if provided, must be an
-object with options provided as named fields.
+object with fields as described in the [options section](#options).
 
 ### Struct arrays
 
@@ -583,14 +583,18 @@ preexisting buffer.
 
 ## Prototypes
 
-All type definitions have an accompanying `prototype`. The `[[Prototype]]` of new
-instances of a type is set to that `prototype`. For struct type definitions, the
-`prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The
-`[[Prototype]]` of arrays of a struct type `PointType`, instantiated using `new
-PointType.array()`, is set to `PointType.array.prototype`. That object's own
-`[[Prototype]]` is set to `StructType.array.prototype`. Finally, the `[[Prototype]]` of
-`StructType.array.prototype` is immutably set to `%TypedArray%.prototype`. I.e., struct
-type arrays are subclasses of `TypedArray`, just as typed arrays are.
+Typed objects introduce complex hierarchies of prototypes. As for other objects, the
+`[[Prototype]]` of typed object instances is set to their constructor's `prototype`. The
+`prototype`s of all struct type definitions have `StructType.prototype` as their
+`[[Prototype]]`.
+
+Analogously, a struct type array has `[type constructor].array.prototype` as its
+`[[Prototype]]`, which in turn has `StructType.array.prototype` as its `[[Prototype]]`.
+Finally, `StructType.array.prototype`'s `[[Prototype]]` is set to
+`%TypedArray%.prototype`. I.e., struct type arrays extend `%TypedArray%`, just as typed
+arrays do.
+
+All `[[Prototype]]`s in these hierarchies are set immutably.
 
 In code:
 
