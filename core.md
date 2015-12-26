@@ -3,23 +3,32 @@
 ## Outline
 
 The explainer proceeds as follows:
+<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
-- [Explain type definitions](#type-definition-objects):
-  - [primitives](#primitive-type-definitions)
-  - [structs](#struct-type-definitions)
-    - [options](#options)
-  - [Typed Object Arrays](#typed-object-arrays)
-- [Explain typed objects](#instantiating-struct-types):
-  - [instantiating struct types](#instantiating-struct-types)
-  - [instantiating struct type arrays](#instantiating-struct-type-arrays)
-  - [backing buffers](#backing-buffers)
-  - [accessing fields and elements of structs](#reading-fields-and-elements)
-    - [reading fields](#reading-fields-and-elements)
-    - [assigning fields](#assigning-fields)
-  - [canonicalization and equality](#canonicalization-of-typed-objects--equality)
-  - [prototypes](#prototypes)
+- [Explainer for type objects core](#explainer-for-type-objects-core)
+	- [Outline](#outline)
+	- [Type definition objects](#type-definition-objects)
+		- [Primitive type definitions](#primitive-type-definitions)
+		- [Struct type definitions](#struct-type-definitions)
+		- [Struct arrays](#struct-arrays)
+			- [Examples](#examples)
+				- [Standard structs](#standard-structs)
+				- [Indexed structs](#indexed-structs)
+				- [Nested structs](#nested-structs)
+				- [Options](#options)
+					- [Opacity](#opacity)
+	- [Instantiation](#instantiation)
+		- [Instantiating struct types](#instantiating-struct-types)
+		- [Instantiating struct type arrays](#instantiating-struct-type-arrays)
+		- [Backing buffers](#backing-buffers)
+		- [Reading fields and elements](#reading-fields-and-elements)
+		- [Assigning fields](#assigning-fields)
+		- [Canonicalization of typed objects / equality](#canonicalization-of-typed-objects-equality)
+	- [Prototypes](#prototypes)
 - [Interacting with array buffers](#interacting-with-array-buffers)
-  - [Transparency and opacity](#opacity)
+	- [Opacity](#opacity)
+
+<!-- /TOC -->
 
 ## Type definition objects
 
