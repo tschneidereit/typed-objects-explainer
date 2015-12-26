@@ -209,12 +209,55 @@ improves cache behavior since the data is contiguous in memory.
 ##### Options
 
 The `options` parameter can influence certain aspects of a struct's
-semantics.
+semantics. Options are specified using fields on an object passed as the `options`
+parameter.
 
-###### Opacity
+#### Option: transparent
 
-For now, valid options include `transparent` is the only option, see the section on
-opacity below for details.
+If the `options` object contains a `transparent` field with a truthy value, instances are
+transparent, meaning it's possible to get to their underlying `ArrayBuffer`. See the
+[section on opacity](#opacity) below for details.
+
+#### Option: defaults
+
+If the `options` object contains a `defaults` field, the value of that field is used as a
+source of default values for fields of the specified type. See the [section on default
+values](#default-values) below for details.
+
+#### Default Values
+
+Using the `defaults` field on the `StructType` constructor's `options` parameter,
+default values for members of the struct type can be overridden. As for the normal
+default values, overridden defaults are applied in place of missing fields in the source
+object. That means that it's possible to provide defaults for primitives and embedded
+struct types alike. In case an embedded struct isn't completely defined by the source
+object, only the missing fields are set to the overridden default values - again just as
+for builtin defaults.
+
+```js
+const PointType = new StructType({x: float64, y: float64});
+let defaults = {
+  topLeft: new PointType({x: Number.NEGATIVE_INFINITY, y: Number.NEGATIVE_INFINITY}),
+  bottomRight: {x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY}
+};
+const RectangleType = new StructType({topLeft: PointType, bottomRight: PointType},
+                                   {defaults: defaults});
+// Instantiate from a source object with one partially and one entirely missing field:
+let rect1 = new RectangleType({topLeft: {x: 10}});
+rect1.topLeft.x === 10;
+rect1.topLeft.y === Number.NEGATIVE_INFINITY;
+rect1.bottomRight.x === Number.POSITIVE_INFINITY;
+rect1.bottomRight.y === Number.POSITIVE_INFINITY;
+```
+
+It's an error to provide default values with incorrect types for members with primitive
+type. For members with struct type, only the structure of the default value (and the
+types of any fields that provide default values for members with primitive type contained
+in the struct type) is relevant, not its type.
+
+As with builtin default values, overridden default values only apply during
+instantiation, not during assignment. That is, it's still an error to assign an
+incomplete example object to a member that is an embedded struct.
 
 ## Instantiation
 
