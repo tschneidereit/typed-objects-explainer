@@ -200,7 +200,11 @@ improves cache behavior since the data is contiguous in memory.
 ##### Options
 
 The `options` parameter can influence certain aspects of a struct's
-semantics. For now, `transparent` is the only option, see the section on
+semantics.
+
+###### Opacity
+
+For now, valid options include `transparent` is the only option, see the section on
 opacity below for details.
 
 ## Instantiation
