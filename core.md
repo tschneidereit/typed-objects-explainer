@@ -3,34 +3,37 @@
 ## Outline
 
 The explainer proceeds as follows:
-<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
-- [Explainer for type objects core](#explainer-for-type-objects-core)
-	- [Outline](#outline)
-	- [Type definition objects](#type-definition-objects)
-		- [Primitive type definitions](#primitive-type-definitions)
-		- [Struct type definitions](#struct-type-definitions)
-		- [Struct arrays](#struct-arrays)
-			- [Examples](#examples)
-				- [Standard structs](#standard-structs)
-				- [Indexed structs](#indexed-structs)
-				- [Nested structs](#nested-structs)
-				- [Options](#options)
-					- [Opacity](#opacity)
-	- [Instantiation](#instantiation)
-		- [Instantiating struct types](#instantiating-struct-types)
-		- [Instantiating struct type arrays](#instantiating-struct-type-arrays)
-		- [Backing buffers](#backing-buffers)
-		- [Reading fields and elements](#reading-fields-and-elements)
-		- [Assigning fields](#assigning-fields)
-		- [Canonicalization of typed objects / equality](#canonicalization-of-typed-objects-equality)
-	- [Prototypes](#prototypes)
-- [Interacting with array buffers](#interacting-with-array-buffers)
-	- [Opacity](#opacity)
+<!-- TOC depthFrom:1 depthTo:7 withLinks:1 updateOnSave:1 orderedList:1 -->
+
+1. [Explainer for type objects core](#explainer-for-type-objects-core)
+	1. [Outline](#outline)
+	2. [Type definitions](#type-definitions)
+		1. [Primitive type definitions](#primitive-type-definitions)
+		2. [Struct type definitions](#struct-type-definitions)
+		3. [Struct arrays](#struct-arrays)
+		4. [Options](#options)
+			1. [Option: transparent](#option-transparent)
+			2. [Option: defaults](#option-defaults)
+		5. [Examples](#examples)
+			1. [Standard structs](#standard-structs)
+			2. [Indexed structs](#indexed-structs)
+			3. [Nested structs](#nested-structs)
+	3. [Instantiation](#instantiation)
+		1. [Instantiating struct types](#instantiating-struct-types)
+			1. [Default Values](#default-values)
+		2. [Instantiating struct type arrays](#instantiating-struct-type-arrays)
+	4. [Reading fields and elements](#reading-fields-and-elements)
+	5. [Assigning fields](#assigning-fields)
+	6. [Backing buffers](#backing-buffers)
+	7. [Canonicalization of typed objects / equality](#canonicalization-of-typed-objects-equality)
+	8. [Interacting with array buffers](#interacting-with-array-buffers)
+	9. [Opacity](#opacity)
+	10. [Prototypes](#prototypes)
 
 <!-- /TOC -->
 
-## Type definition objects
+## Type definitions
 
 The central part of the typed objects specification are *type
 definition objects*, generally called *type definitions* for
@@ -89,7 +92,8 @@ the mechanisms needed to support that.
 
 ### Struct type definitions
 
-Struct types are defined using the `StructType` constructor. There are two overloads of that constructor:
+Struct types are defined using the `StructType` constructor. There are two overloads of
+that constructor:
 
 ```js
 function StructType(structure, [options])
@@ -123,9 +127,27 @@ let points = new PointType.array(10);
 For the full set of overloads of the `array` constructor see the [section on
 instantiating struct type arrays]() below.
 
-#### Examples
+### Options
 
-##### Standard structs
+The `options` parameter can influence certain aspects of a struct's
+semantics. Options are specified using fields on an object passed as the `options`
+parameter.
+
+#### Option: transparent
+
+If the `options` object contains a `transparent` field with a truthy value, instances are
+transparent, meaning it's possible to get to their underlying `ArrayBuffer`. See the
+[section on opacity](#opacity) below for details.
+
+#### Option: defaults
+
+If the `options` object contains a `defaults` field, the value of that field is used as a
+source of default values for fields of the specified type. See the [section on default
+values](#default-values) below for details.
+
+### Examples
+
+#### Standard structs
 
 ```js
 const PointType = new StructType({x: float64, y: float64});
@@ -140,7 +162,7 @@ struct would:
     | y: float64 |      |
     +============+    --+
 
-##### Indexed structs
+#### Indexed structs
 
 ```js
 const PointPairType = new StructType(PointType, 2);
@@ -162,7 +184,7 @@ An equivalent definition to this, that'd become unwieldy for large `length`s, wo
 const PointPairType = new StructType({0: PointType, 1: PointType, length: 2});
 ```
 
-##### Nested structs
+#### Nested structs
 
 Struct types can embed other struct types both as indexed elements as above and as named fields:
 
@@ -203,61 +225,8 @@ layout roughly like this:
 
 The typed objects approach of embedding types within one another by
 default can save a significant amount of memory, particularly if you
-have a lot of large number of lines embedded in an array. It also
+have a large number of lines embedded in an array. It also
 improves cache behavior since the data is contiguous in memory.
-
-##### Options
-
-The `options` parameter can influence certain aspects of a struct's
-semantics. Options are specified using fields on an object passed as the `options`
-parameter.
-
-#### Option: transparent
-
-If the `options` object contains a `transparent` field with a truthy value, instances are
-transparent, meaning it's possible to get to their underlying `ArrayBuffer`. See the
-[section on opacity](#opacity) below for details.
-
-#### Option: defaults
-
-If the `options` object contains a `defaults` field, the value of that field is used as a
-source of default values for fields of the specified type. See the [section on default
-values](#default-values) below for details.
-
-#### Default Values
-
-Using the `defaults` field on the `StructType` constructor's `options` parameter,
-default values for members of the struct type can be overridden. As for the normal
-default values, overridden defaults are applied in place of missing fields in the source
-object. That means that it's possible to provide defaults for primitives and embedded
-struct types alike. In case an embedded struct isn't completely defined by the source
-object, only the missing fields are set to the overridden default values - again just as
-for builtin defaults.
-
-```js
-const PointType = new StructType({x: float64, y: float64});
-let defaults = {
-  topLeft: new PointType({x: Number.NEGATIVE_INFINITY, y: Number.NEGATIVE_INFINITY}),
-  bottomRight: {x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY}
-};
-const RectangleType = new StructType({topLeft: PointType, bottomRight: PointType},
-                                   {defaults: defaults});
-// Instantiate from a source object with one partially and one entirely missing field:
-let rect1 = new RectangleType({topLeft: {x: 10}});
-rect1.topLeft.x === 10;
-rect1.topLeft.y === Number.NEGATIVE_INFINITY;
-rect1.bottomRight.x === Number.POSITIVE_INFINITY;
-rect1.bottomRight.y === Number.POSITIVE_INFINITY;
-```
-
-It's an error to provide default values with incorrect types for members with primitive
-type. For members with struct type, only the structure of the default value (and the
-types of any fields that provide default values for members with primitive type contained
-in the struct type) is relevant, not its type.
-
-As with builtin default values, overridden default values only apply during
-instantiation, not during assignment. That is, it's still an error to assign an
-incomplete example object to a member that is an embedded struct.
 
 ## Instantiation
 
@@ -311,6 +280,41 @@ line1.from.x = example.to.x;
 line1.from.y = example.to.y;
 ```
 
+#### Default Values
+
+Using the `defaults` field on the `StructType` constructor's `options` parameter,
+default values for members of the struct type can be overridden. As for the normal
+default values, overridden defaults are applied in place of missing fields in the source
+object. That means that it's possible to provide defaults for primitives and embedded
+struct types alike. In case an embedded struct isn't completely defined by the source
+object, only the missing fields are set to the overridden default values - again just as
+for builtin defaults.
+
+```js
+const PointType = new StructType({x: float64, y: float64});
+let defaults = {
+  topLeft: new PointType({x: Number.NEGATIVE_INFINITY, y: Number.NEGATIVE_INFINITY}),
+  bottomRight: {x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY}
+};
+const RectangleType = new StructType({topLeft: PointType, bottomRight: PointType},
+                                   {defaults: defaults});
+// Instantiate from a source object with one partially and one entirely missing field:
+let rect1 = new RectangleType({topLeft: {x: 10}});
+rect1.topLeft.x === 10;
+rect1.topLeft.y === Number.NEGATIVE_INFINITY;
+rect1.bottomRight.x === Number.POSITIVE_INFINITY;
+rect1.bottomRight.y === Number.POSITIVE_INFINITY;
+```
+
+It's an error to provide default values with incorrect types for members with primitive
+type. For members with struct type, only the structure of the default value (and the
+types of any fields that provide default values for members with primitive type contained
+in the struct type) is relevant, not its type.
+
+As with builtin default values, overridden default values only apply during
+instantiation, not during assignment. That is, it's still an error to assign an
+incomplete example object to a member that is an embedded struct.
+
 ### Instantiating struct type arrays
 
 For each type definition, a fixed-sized typed array of instances of that type can be
@@ -333,38 +337,7 @@ let coercedPoints = new PointType.array([new PointType(1, 2), new PointType(10, 
 let pointsView = new PointType.array(buffer(points), 3, 3);
 ```
 
-### Backing buffers
-
-Conceptually at least, every typed object is actually a *view* onto an
-`ArrayBuffer` backing buffer, just as is the case for typed arrays. Say you
-create a line like:
-
-```js
-let line1 = new LineType({from: {x: 1, y: 2},
-                          to: {x: 3, y: 4}});
-```
-
-The result will be two objects as shown:
-
-    line1 ----> +===========+
-                | buffer    | ----> +============+ ArrayBuffer
-                | offset: 0 |       | from: x: 1 |
-                +===========+       |       y: 2 |
-                                    | to:   x: 3 |
-                                    |       y: 4 |
-                                    +============+
-
-As you can see from the diagram, the typed object `line1` doesn't
-actually store any data itself. Instead, it is simply a pointer into a
-backing store that contains the data itself.
-
-*Efficiency note:* The spec has been designed so that, most of the
-time, engines only have to create the backing buffer object and not
-the pointer object `line1`. Instead of creating an object to store the
-buffer and offset, the engine can usually just store the buffer and
-offset directly as synthetic local variables.
-
-### Reading fields and elements
+## Reading fields and elements
 
 When you access a field `f` of a typed object, the result depends on
 the type with which `f` was declared. If `f` was declared with struct type,
@@ -417,7 +390,7 @@ image[22][44] // yields a typed object of type ColorType
 image[22][44].r // yields a number
 ```
 
-### Assigning fields
+## Assigning fields
 
 When you assign to a field, the backing store is modified accordingly.
 The process is precisely the same as when providing an initial value
@@ -465,7 +438,38 @@ line.to = {x: 22, y: 44};
 line.to = {x: float64(22), y: float64(44)};
 ```
 
-### Canonicalization of typed objects / equality
+## Backing buffers
+
+Conceptually at least, every typed object is actually a *view* onto an
+`ArrayBuffer` backing buffer, just as is the case for typed arrays. Say you
+create a line like:
+
+```js
+let line1 = new LineType({from: {x: 1, y: 2},
+                          to: {x: 3, y: 4}});
+```
+
+The result will be two objects as shown:
+
+    line1 ----> +===========+
+                | buffer    | ----> +============+ ArrayBuffer
+                | offset: 0 |       | from: x: 1 |
+                +===========+       |       y: 2 |
+                                    | to:   x: 3 |
+                                    |       y: 4 |
+                                    +============+
+
+As you can see from the diagram, the typed object `line1` doesn't
+actually store any data itself. Instead, it is simply a pointer into a
+backing store that contains the data itself.
+
+*Efficiency note:* The spec has been designed so that, most of the
+time, engines only have to create the backing buffer object and not
+the pointer object `line1`. Instead of creating an object to store the
+buffer and offset, the engine can usually just store the buffer and
+offset directly as synthetic local variables.
+
+## Canonicalization of typed objects / equality
 
 In a prior section, we said that accessing a field of a typed object
 will return a new typed object that shares the same backing buffer if the
@@ -506,38 +510,7 @@ map. Nonetheless, modeling the behavior as if the cache existed is
 useful because it tells us what should happen when a typed object is
 placed into a weakmap.
 
-## Prototypes
-
-All type definitions have an accompanying `prototype`. The `[[Prototype]]` of new
-instances of a type is set to that `prototype`. For struct type definitions, the
-`prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The
-`[[Prototype]]` of arrays of a struct type `PointType`, instantiated using `new
-PointType.array()`, is set to `PointType.array.prototype`. That object's own
-`[[Prototype]]` is set to `StructType.array.prototype`. Finally, the `[[Prototype]]` of
-`StructType.array.prototype` is immutably set to `%TypedArray%.prototype`. I.e., struct
-type arrays are subclasses of `TypedArray`, just as typed arrays are.
-
-In code:
-
-```js
-const PointType = new StructType({x: float64, y: float64});
-const LineType = new StructType({from: Point, to: Point});
-let point = new PointType();
-let points1 = new PointType.array(2);
-let points2 = new PointType.array(5);
-let line = new LineType();
-// These all yield `true`:
-point.__proto__ === PointType.prototype;
-points1.__proto__ === PointType.array.prototype;
-points2.__proto__ === points1.__proto__;
-PointType.prototype.__proto__ === StructType.prototype;
-PointType.array.prototype.__proto__ === StructType.array.prototype;
-StructType.array.prototype.__proto__ === Uint8Array.prototype.__proto__;
-line.__proto__ === LineType.prototype;
-line.from.__proto__ === PointType.prototype;
-```
-
-# Interacting with array buffers
+## Interacting with array buffers
 
 In all the examples we have shown thus far, we have used the `new`
 constructor to create instances of struct type definitions or their accompanying
@@ -571,7 +544,8 @@ the buffer onto which the struct instance is a view. This is a measure of
 protection, since otherwise passing a pointer to (say) an individual nested
 struct also provides access to the entire outer struct.
 
-Sometimes, though, it's useful to allow accessing the underlying buffer. This can be enabled on a per-type basis using the `transparent` option:
+Sometimes, though, it's useful to allow accessing the underlying buffer. This can be
+enabled on a per-type basis using the `transparent` option:
 
 ```js
 const PointType = new StructType({x: float64, y: float64}, {transparent: true});
@@ -606,3 +580,34 @@ when defining a type containing `object` or `string` pointers or `any` fields
 throws an exception. For the same reason, it's not possible to use the `view`
 static method on opaque struct type constructors to create a view onto a
 preexisting buffer.
+
+## Prototypes
+
+All type definitions have an accompanying `prototype`. The `[[Prototype]]` of new
+instances of a type is set to that `prototype`. For struct type definitions, the
+`prototype`'s own `[[Prototype]]` is immutably set to `StructType.prototype`. The
+`[[Prototype]]` of arrays of a struct type `PointType`, instantiated using `new
+PointType.array()`, is set to `PointType.array.prototype`. That object's own
+`[[Prototype]]` is set to `StructType.array.prototype`. Finally, the `[[Prototype]]` of
+`StructType.array.prototype` is immutably set to `%TypedArray%.prototype`. I.e., struct
+type arrays are subclasses of `TypedArray`, just as typed arrays are.
+
+In code:
+
+```js
+const PointType = new StructType({x: float64, y: float64});
+const LineType = new StructType({from: Point, to: Point});
+let point = new PointType();
+let points1 = new PointType.array(2);
+let points2 = new PointType.array(5);
+let line = new LineType();
+// These all yield `true`:
+point.__proto__ === PointType.prototype;
+points1.__proto__ === PointType.array.prototype;
+points2.__proto__ === points1.__proto__;
+PointType.prototype.__proto__ === StructType.prototype;
+PointType.array.prototype.__proto__ === StructType.array.prototype;
+StructType.array.prototype.__proto__ === Uint8Array.prototype.__proto__;
+line.__proto__ === LineType.prototype;
+line.from.__proto__ === PointType.prototype;
+```
