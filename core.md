@@ -287,6 +287,10 @@ line1.from.x = example.to.x;
 line1.from.y = example.to.y;
 ```
 
+*Note*: this equivalence doesn't necessarily hold. Depending on the type definition missing fields
+in `example` might be interpreted differently during initialization vs. assignment. See the
+sections on default values and assignment below.
+
 #### Default Values
 
 Using the `defaults` field on the `StructType` constructor's `options` parameter,
