@@ -108,6 +108,9 @@ The second overload is a shortcut for defining struct types with indexed element
 of a certain type: each entry is an instance of the struct type `elementType`, and
 the length is determined by `length`.
 
+The overload is chosen depending on the second argument's type: if
+`typeof arguments[1] === 'number', the second overload is chosen, otherwise the first.
+
 In both cases, the optional `options` parameter, if provided, must be an
 object with fields as described in the [options section](#options).
 
