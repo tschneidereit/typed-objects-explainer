@@ -413,8 +413,8 @@ image[22][44].r // yields a number
 ## Assigning fields
 
 When you assign to a field, the backing store is modified accordingly.
-The process is precisely the same as when providing an initial value
-for a typed object. This means that you can write things like:
+As long as the rhs has the require structure, the process is precisely the same as when
+providing an initial value for a typed object. This means that you can write things like:
 
 ```js
 let line = new LineType();
