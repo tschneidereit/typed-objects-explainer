@@ -22,7 +22,7 @@ The explainer proceeds as follows:
 	3. [Instantiation](#instantiation)
 		1. [Instantiating struct types](#instantiating-struct-types)
 			1. [Default Values](#default-values)
-		2. [Instantiating struct type arrays](#instantiating-struct-type-arrays)
+		2. [Creating struct arrays](#creating-struct-arrays)
 	4. [Reading fields and elements](#reading-fields-and-elements)
 	5. [Assigning fields](#assigning-fields)
 	6. [Backing buffers](#backing-buffers)
@@ -117,18 +117,18 @@ object with fields as described in the [options section](#options).
 ### Struct arrays
 
 In addition to the indexed structs described above, which each have their own nominal
-type and `prototype`, each struct type has an accompanying `array` constructor which
+type and `prototype`, each struct type has an accompanying `array` method which
 can be used to create fixed-sized typed arrays of elements of the struct's type.
 Just as for the existing typed Arrays such as `Uint8Array`, instances of these arrays
 all share the same nominal type and `prototype`, regardless of the length.
 
 ```js
 const PointType = new StructType({x: float64, y: float64});
-let points = new PointType.array(10);
+let points = PointType.array(10);
 ```
 
-For the full set of overloads of the `array` constructor see the [section on
-instantiating struct type arrays]() below.
+For the full set of overloads of the `array` method see the [section on
+creating struct arrays](creating-struct-arrays) below.
 
 ### Options
 
@@ -326,28 +326,35 @@ As with builtin default values, overridden default values only apply during
 instantiation, not during assignment. That is, it's still an error to assign an
 incomplete example object to a member that is an embedded struct.
 
-### Instantiating struct type arrays
+### Creating struct arrays
 
 For each struct type definition, a fixed-sized typed array of instances of
-that type can be created using the type's `.array` constructor.
+that type can be created using the type's `.array` method.
 
-Just as typed array constructors, typed object array constructors support four
+Struct arrays are governed by the same canonicalization rules as structs: if two struct
+arrays are views onto the same buffer with the same offset, they're considered identical.
+While this is a deviation from how typed arrays work, it leads to less-surprising
+results. Otherwise, two struct arrays of the same type that are views onto the same
+offset of the same buffer would have different identity, while their entries would be
+canonicalized.
+
+Just as typed array constructors, typed object array methods support four
 different overloads:
 
 ```js
 // Make the type transparent so its buffer can be used in the last line below.
 const PointType = new StructType({x: float64, y: float64}, {transparent: true});
 // Creates an instance of length 10, with all entries initialized to default values.
-let points = new PointType.array(10);
-// Creates a copy of `points`.
-let pointsCopy = new PointType.array(points);
+let points = PointType.array(10);
+// Creates a copy of `points`, including a copy of the underlying buffer.
+let pointsCopy = PointType.array(points);
 // Creates an instance by iterating over the array-like or iterable source and
 // creating instances of `PointType` for all encountered items.
-let coercedPoints = new PointType.array([new PointType(1, 2), new PointType(10, 20)]);
+let coercedPoints = PointType.array([new PointType(1, 2), new PointType(10, 20)]);
 // Creates an instance as a view onto the given buffer, starting at the given
 // offset and with the given length, both of which are optional.
 // This overload is only available for transparent types.
-let pointsView = new PointType.array(buffer(points), 3, 3);
+let pointsView = PointType.array(buffer(points), 3, 3);
 ```
 
 ## Reading fields and elements
