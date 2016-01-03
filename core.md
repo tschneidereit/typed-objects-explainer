@@ -328,14 +328,15 @@ incomplete example object to a member that is an embedded struct.
 
 ### Instantiating struct type arrays
 
-For each type definition, a fixed-sized typed array of instances of that type can be
-created using the type's `.array` constructor.
+For each struct type definition, a fixed-sized typed array of instances of
+that type can be created using the type's `.array` constructor.
 
 Just as typed array constructors, typed object array constructors support four
 different overloads:
 
 ```js
-const PointType = new StructType({x: float64, y: float64});
+// Make the type transparent so its buffer can be used in the last line below.
+const PointType = new StructType({x: float64, y: float64}, {transparent: true});
 // Creates an instance of length 10, with all entries initialized to default values.
 let points = new PointType.array(10);
 // Creates a copy of `points`.
@@ -345,6 +346,7 @@ let pointsCopy = new PointType.array(points);
 let coercedPoints = new PointType.array([new PointType(1, 2), new PointType(10, 20)]);
 // Creates an instance as a view onto the given buffer, starting at the given
 // offset and with the given length, both of which are optional.
+// This overload is only available for transparent types.
 let pointsView = new PointType.array(buffer(points), 3, 3);
 ```
 
