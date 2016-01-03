@@ -387,13 +387,13 @@ before, but with a different offset. The offset is now 16, because it
 points at the `to` point (and each point consists of two `float64`s,
 which are 8 bytes each).
 
-Unlike for structs, accessing a field of primitive type does
-not return a typed object. Instead, it simply copies the value out
+Accessing a field of primitive type does not return a typed object, in
+contrast to fields of struct type. Instead, it simply copies the value out
 from the array buffer and returns that. Therefore, `toPoint.x` yields
 the value `1`, not a pointer into the buffer.
 
 The rules for accessing named and indexed properties of a struct are the same.
-If for example you have a `uint8` indexed struct type like
+If for example you have an instance `array` of a `uint8` indexed struct type like
 `new StructType(uint8, 32)`, then `array[0]` will yield a number. If you
 have an array of structs, then the result is a new typed object pointing into
 the same buffer, just as when accessing a struct field:
