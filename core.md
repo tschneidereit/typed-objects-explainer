@@ -171,8 +171,9 @@ struct would:
 const PointPairType = new StructType(PointType, 2);
 ```
 
-This defines a new type definition `LineType` that consists of two indexed
-elements, each an instance of `PointType`. These will be laid out in memory consecutively, just as a C struct would:
+This defines a new type definition `PointPairType` that consists of two indexed
+elements, each an instance of `PointType`. These will be laid out in memory consecutively,
+just as a C struct would:
 
     +===============+    --+ PointPairType
     | 0: x: float64 |      | --+ PointType
@@ -181,10 +182,13 @@ elements, each an instance of `PointType`. These will be laid out in memory cons
     |    y: float64 |      |
     +===============+    --+
 
+Additionally, a non-writable, non-configurable `length` property is defined on the type's prototype.
+
 An equivalent definition to this, that'd become unwieldy for large `length`s, would be:
 
 ```js
-const PointPairType = new StructType({0: PointType, 1: PointType, length: 2});
+const PointPairType = new StructType({0: PointType, 1: PointType});
+Object.defineProperty(PointPairType.prototype, 'length', {value: 2});
 ```
 
 #### Nested structs
