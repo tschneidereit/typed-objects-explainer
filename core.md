@@ -109,7 +109,7 @@ of a certain type: each entry is an instance of the struct type `elementType`, a
 the length is determined by `length`.
 
 The overload is chosen depending on the second argument's type: if
-`typeof arguments[1] === 'number', the second overload is chosen, otherwise the first.
+`typeof arguments[1] === 'number'`, the second overload is chosen, otherwise the first.
 
 In both cases, the optional `options` parameter, if provided, must be an
 object with fields as described in the [options section](#options).
@@ -119,7 +119,7 @@ object with fields as described in the [options section](#options).
 In addition to the indexed structs described above, which each have their own nominal
 type and `prototype`, each struct type has an accompanying `array` method which
 can be used to create fixed-sized typed arrays of elements of the struct's type.
-Just as for the existing typed Arrays such as `Uint8Array`, instances of these arrays
+Just as for the existing typed arrays such as `Uint8Array`, instances of these arrays
 all share the same nominal type and `prototype`, regardless of the length.
 
 ```js
@@ -128,7 +128,7 @@ let points = PointType.array(10);
 ```
 
 For the full set of overloads of the `array` method see the [section on
-creating struct arrays](creating-struct-arrays) below.
+creating struct arrays](#creating-struct-arrays) below.
 
 ### Options
 
