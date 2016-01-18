@@ -26,7 +26,7 @@ The explainer proceeds as follows:
 	4. [Reading fields and elements](#reading-fields-and-elements)
 	5. [Assigning fields](#assigning-fields)
 	6. [Backing buffers](#backing-buffers)
-	7. [Canonicalization of typed objects / equality](#canonicalization-of-typed-objects-equality)
+	7. [Canonicalization of typed objects / equality](#canonicalization-of-typed-objects--equality)
 	8. [Interacting with array buffers](#interacting-with-array-buffers)
 	9. [Opacity](#opacity)
 	10. [Prototypes](#prototypes)
@@ -410,10 +410,13 @@ image[22][44] // yields a typed object of type ColorType
 image[22][44].r // yields a number
 ```
 
+Structs are non-extensible, and trying to access non-existent properties on them
+throws a `TypeError`.
+
 ## Assigning fields
 
 When you assign to a field, the backing store is modified accordingly.
-As long as the rhs has the require structure, the process is precisely the same as when
+As long as the rhs has the required structure, the process is precisely the same as when
 providing an initial value for a typed object. This means that you can write things like:
 
 ```js
@@ -458,6 +461,20 @@ line.to = {x: 22, y: 44};
 line.to = {x: float64(22), y: float64(44)};
 ```
 
+### No Dynamic Properties
+
+Trying to assign to a non-existent field on a struct throws a `TypeError` instead of
+adding a dynamic property to the instance. Essentially all struct type instances behave
+as though `Object.preventExtensions()` had been invoked on them.
+
+*Rationale*: The canonicalization rules described
+[below](#canonicalization-of-typed-objects--equality) mean that structs don't have a way
+to add dynamic properties to them: they would have to be associated with the starting
+offset of the struct in the underlying buffer because the struct itself is just a fat pointer
+to that location. Only for opaque structs that are not embedded in other structs would it be
+possible to add them to the struct itself, but supporting dynamic properties on some structs
+but not others would be surprising.
+
 ## Backing buffers
 
 Conceptually at least, every typed object is actually a *view* onto an
@@ -493,7 +510,7 @@ offset directly as synthetic local variables.
 
 In a prior section, we said that accessing a field of a typed object
 will return a new typed object that shares the same backing buffer if the
-field has struct type. Based on this, you might wonder what happens if you
+field has a struct type. Based on this, you might wonder what happens if you
 access the same field twice in a row:
 
 ```js
