@@ -25,11 +25,13 @@ The explainer proceeds as follows:
 		2. [Creating struct arrays](#creating-struct-arrays)
 	4. [Reading fields and elements](#reading-fields-and-elements)
 	5. [Assigning fields](#assigning-fields)
+		1. [No Dynamic Properties](#no-dynamic-properties)
 	6. [Backing buffers](#backing-buffers)
 	7. [Canonicalization of typed objects / equality](#canonicalization-of-typed-objects--equality)
 	8. [Interacting with array buffers](#interacting-with-array-buffers)
 	9. [Opacity](#opacity)
 	10. [Prototypes](#prototypes)
+		1. [Shared Base Constructors](#shared-base-constructors)
 
 <!-- /TOC -->
 
@@ -620,16 +622,36 @@ preexisting buffer.
 
 ## Prototypes
 
-Typed objects introduce complex hierarchies of prototypes. As for other objects, the
-`[[Prototype]]` of typed object instances is set to their constructor's `prototype`. The
-`prototype`s of all struct type definitions have `StructType.prototype` as their
-`[[Prototype]]`.
+Typed objects introduce several inheritance hierarchies. In addition to the
+prototype chains of struct type instances, there are those for the struct
+types themselves and for struct type arrays.
 
-Analogously, a struct type array has `[type constructor].array.prototype` as its
-`[[Prototype]]`, which in turn has `StructType.array.prototype` as its `[[Prototype]]`.
-Finally, `StructType.array.prototype`'s `[[Prototype]]` is set to
-`%TypedArray%.prototype`. I.e., struct type arrays extend `%TypedArray%`, just as typed
-arrays do.
+In general, just like with other objects, the `[[Prototype]]` of all involved
+instances is set to their constructor's `prototype`:
+
+For struct type definitions, that means the `[[Prototype]]` is set to
+`StructType.prototype`.
+
+For instances of a struct type `PointType`, the `[[Prototype]]` is set to
+`PointType.prototype`.
+
+Finally, for instances of a struct type array `PointType.array`, the
+`[[Prototype]]` is set to `PointType.array.prototype`.
+
+### Shared Base Constructors
+
+Analogously to typed arrays, which all inherit from
+[`%TypedArray%`](https://tc39.github.io/ecma262/#sec-%typedarray%-intrinsic-object),
+Struct types and their instances inherit from shared base constructors:
+
+The `[[Prototype]]` of `StructType.prototype` is `%Type%.prototype`, where
+`%Type%` is an intrinsic that's not directly exposed.
+
+The `[[Prototype]]` of `PointType.prototype` is `%Struct%.prototype`, where
+`%Struct%` is an intrinsic that's not directly exposed.
+
+The `[[Prototype]]` of `PointType.array.prototype` is `%Struct%.array.prototype`,
+where, again, `%Struct%` is an intrinsic that's not directly exposed.
 
 All `[[Prototype]]`s in these hierarchies are set immutably.
 
@@ -638,17 +660,21 @@ In code:
 ```js
 const PointType = new StructType({x: float64, y: float64});
 const LineType = new StructType({from: Point, to: Point});
+
 let point = new PointType();
-let points1 = new PointType.array(2);
-let points2 = new PointType.array(5);
+let points1 = PointType.array(2);
+let points2 = PointType.array(5);
 let line = new LineType();
+
 // These all yield `true`:
 point.__proto__ === PointType.prototype;
-points1.__proto__ === PointType.array.prototype;
-points2.__proto__ === points1.__proto__;
-PointType.prototype.__proto__ === StructType.prototype;
-PointType.array.prototype.__proto__ === StructType.array.prototype;
-StructType.array.prototype.__proto__ === Uint8Array.prototype.__proto__;
 line.__proto__ === LineType.prototype;
 line.from.__proto__ === PointType.prototype;
+
+points1.__proto__ === PointType.array.prototype;
+points2.__proto__ === points1.__proto__;
+
+// Pretending %Struct% is directly exposed:
+PointType.prototype.__proto__ === %Struct%.prototype;
+PointType.array.prototype.__proto__ === %Struct%.array.prototype;
 ```
