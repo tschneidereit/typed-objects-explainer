@@ -348,7 +348,12 @@ Instance memory layout:
     | c: uint32 |      | --+ Data
     +===========+    --+
 
-Opaque struct types can be reordered to minimize memory waste:
+Implementations can freely reorder fields in opaque struct types, so for the
+above type the layout could also be changed to `c, a, b`, with or without
+padding at the end.
+
+Assuming an implementation always adds padding to achieve natural alignment
+for all fields, reordering can still be useful to combine and reduce padding:
 
 Type definition:
 
@@ -506,9 +511,9 @@ let pointsCopy = PointType.array(points);
 // creating instances of `PointType` for all encountered items.
 let coercedPoints = PointType.array([new PointType(1, 2), new PointType(10, 20)]);
 // Creates an instance as a view onto the given buffer, starting at the given
-// offset and with the given length, both of which are optional.
+// byte offset and with the given length, both of which are optional.
 // This overload is only available for transparent types.
-let pointsView = PointType.array(buffer(points), 3, 3);
+let pointsView = PointType.array(buffer(points), 16, 3);
 ```
 
 ## Reading fields and elements
