@@ -279,10 +279,10 @@ struct.
 ### Padding
 
 To ensure the alignment rules described above hold, padding is inserted between
-fields of a struct and struct array elements. There are two ways in which this
-is relevant: it changes a struct's total byte length, and it affects what happens
-when two different types are mapped as views onto the same `ArrayBuffer`. See
-the section on
+fields of a struct and struct array elements to align each field up to its
+natural alignment. There are two ways in which this is relevant: it changes a
+struct's total byte length, and it affects what happens when two different types
+are mapped as views onto the same `ArrayBuffer`. See the section on
 [`DataBuffer` interactions below](#interacting-with-array-buffers).
 
 ### Alignment and Opacity
@@ -343,8 +343,8 @@ Instance memory layout:
     +===========+    --+ MixedType
     | a: uint8  |      | --+ Data
     | b: uint8  |      | --+ Data
-    |    uint8  |      | --+ Padding
-    |    uint8  |      |
+    |    xxx    |      | --+ Padding
+    |    xxx    |      |
     | c: uint32 |      | --+ Data
     +===========+    --+
 
@@ -366,8 +366,8 @@ Instance memory layout:
     +===========+    --+ OpaqueMixedType
     | a: uint8  |      | --+ Data
     | c: uint8  |      | --+ Data
-    |    uint8  |      | --+ Padding
-    |    uint8  |      |
+    |    xxx    |      | --+ Padding
+    |    xxx    |      |
     | b: uint32 |      | --+ Data
     +===========+    --+
 
@@ -384,14 +384,14 @@ Instance memory layout:
 
     +===========+    --+ TransparentMixedType
     | a: uint8  |      | --+ Data
-    |    uint8  |      | --+ Padding
-    |    uint8  |      |
-    |    uint8  |      |
+    |    xxx    |      | --+ Padding
+    |    xxx    |      |
+    |    xxx    |      |
     | b: uint32 |      | --+ Data
     | c: uint8  |      | --+ Data
-    |    uint8  |      | --+ Padding
-    |    uint8  |      |
-    |    uint8  |      |
+    |    xxx    |      | --+ Padding
+    |    xxx    |      |
+    |    xxx    |      |
     +===========+    --+
 
 ## Instantiation
