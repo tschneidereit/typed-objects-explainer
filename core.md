@@ -19,17 +19,26 @@ The explainer proceeds as follows:
 			1. [Standard structs](#standard-structs)
 			2. [Indexed structs](#indexed-structs)
 			3. [Nested structs](#nested-structs)
-	3. [Instantiation](#instantiation)
+	3. [Alignment and Padding](#alignment-and-padding)
+		1. [Alignment: Primitive Types](#alignment-primitive-types)
+		2. [Alignment: Nested Structs](#alignment-nested-structs)
+		3. [Padding](#padding)
+		4. [Alignment and Opacity](#alignment-and-opacity)
+		5. [Alignment and Padding: Examples](#alignment-and-padding-examples)
+	4. [Instantiation](#instantiation)
 		1. [Instantiating struct types](#instantiating-struct-types)
 			1. [Default Values](#default-values)
 		2. [Creating struct arrays](#creating-struct-arrays)
-	4. [Reading fields and elements](#reading-fields-and-elements)
-	5. [Assigning fields](#assigning-fields)
-	6. [Backing buffers](#backing-buffers)
-	7. [Canonicalization of typed objects / equality](#canonicalization-of-typed-objects--equality)
-	8. [Interacting with array buffers](#interacting-with-array-buffers)
-	9. [Opacity](#opacity)
-	10. [Prototypes](#prototypes)
+	5. [Reading fields and elements](#reading-fields-and-elements)
+	6. [Assigning fields](#assigning-fields)
+		1. [Assignment and Alignment Padding](#assignment-and-alignment-padding)
+	7. [No Dynamic Properties](#no-dynamic-properties)
+	8. [Backing buffers](#backing-buffers)
+	9. [Canonicalization of typed objects / equality](#canonicalization-of-typed-objects--equality)
+	10. [Interacting with array buffers](#interacting-with-array-buffers)
+	11. [Opacity](#opacity)
+	12. [Prototypes](#prototypes)
+		1. [Shared Base Constructors](#shared-base-constructors)
 
 <!-- /TOC -->
 
@@ -177,8 +186,8 @@ just as a C struct would:
 
     +===============+    --+ PointPairType
     | 0: x: float64 |      | --+ PointType
-    |    y: float64 |      | --+
-    | 1: x: float64 |      |
+    |    y: float64 |      |
+    | 1: x: float64 |      | --+ PointType
     |    y: float64 |      |
     +===============+    --+
 
@@ -204,8 +213,8 @@ just as you would get in C):
 
     +==================+    --+ LineType
     | from: x: float64 |      | --+ PointType
-    |       y: float64 |      | --+
-    | to:   x: float64 |      |
+    |       y: float64 |      |
+    | to:   x: float64 |      | --+ PointType
     |       y: float64 |      |
     +==================+    --+
 
@@ -234,6 +243,156 @@ The typed objects approach of embedding types within one another by
 default can save a significant amount of memory, particularly if you
 have a large number of lines embedded in an array. It also
 improves cache behavior since the data is contiguous in memory.
+
+## Alignment and Padding
+
+The alignment of a struct type member field is determined by its type.
+
+### Alignment: Primitive Types
+
+For primitive types, the alignment equals the byte length of the type.
+For the `any`, `string`, and `object` types, the byte length is
+implementation-dependent. (However, that doesn't matter much as it's not
+content-observable. See the [section on opacity](#opacity) for details.)
+
+The byte length and thus alignment of the other types is:
+
+Type    | Byte Length / Alignment
+--------|------------
+uint8   | 1
+int8    | 1
+float32 | 4
+uint16  | 2
+int16   | 2
+uint32  | 4
+int32   | 4
+float64 | 8
+
+### Alignment: Nested Structs
+
+For embedded structs, the alignment is determined by the largest contained
+type. If the embedded struct only contains fields with primitive types, its
+alignment is that of the field with the largest primitive type. If it itself
+contains embedded structs, its alignment is that of the largest embedded
+struct.
+
+### Padding
+
+To ensure the alignment rules described above hold, padding is inserted between
+fields of a struct and struct array elements to align each field up to its
+natural alignment. There are two ways in which this is relevant: it changes a
+struct's total byte length, and it affects what happens when two different types
+are mapped as views onto the same `ArrayBuffer`. See the section on
+[`DataBuffer` interactions below](#interacting-with-array-buffers).
+
+### Alignment and Opacity
+
+The memory layout of transparent struct types is strictly determined by the
+order of the properties in the `structure` passed in to the `StructType`
+constructor. That means it's fully up to the author to minimize memory waste by
+choosing struct layouts that contain as little padding as possible.
+
+The memory layout of opaque struct types, OTOH, isn't observable by content, so
+an implementation is free to change the order of fields to minimize required
+padding.
+
+### Alignment and Padding: Examples
+
+As shown in the examples above, struct type instances whose fields all have
+the same length don't require any padding:
+
+Type definition:
+
+```js
+const PointType = new StructType({x: float64, y: float64});
+```
+
+Instance memory layout:
+
+    +============+    --+ PointType
+    | x: float64 |      |
+    | y: float64 |      |
+    +============+    --+
+
+
+Type definition:
+
+```js
+const PointPairType = new StructType(PointType, 2);
+```
+
+Instance memory layout:
+
+    +===============+    --+ PointPairType
+    | 0: x: float64 |      | --+ PointType
+    |    y: float64 |      |
+    | 1: x: float64 |      | --+ PointType
+    |    y: float64 |      |
+    +===============+    --+
+
+For struct types with fields on non-uniform length, padding is required:
+
+Type definition:
+
+```js
+const MixedType = new StructType({a: uint8, b: uint8, c: uint32});
+```
+
+Instance memory layout:
+
+    +===========+    --+ MixedType
+    | a: uint8  |      | --+ Data
+    | b: uint8  |      | --+ Data
+    |    xxx    |      | --+ Padding
+    |    xxx    |      |
+    | c: uint32 |      | --+ Data
+    +===========+    --+
+
+Implementations can freely reorder fields in opaque struct types, so for the
+above type the layout could also be changed to `c, a, b`, with or without
+padding at the end.
+
+Assuming an implementation always adds padding to achieve natural alignment
+for all fields, reordering can still be useful to combine and reduce padding:
+
+Type definition:
+
+```js
+const OpaqueMixedType = new StructType({a: uint8, b: uint32, c: uint8});
+```
+
+Instance memory layout:
+
+    +===========+    --+ OpaqueMixedType
+    | a: uint8  |      | --+ Data
+    | c: uint8  |      | --+ Data
+    |    xxx    |      | --+ Padding
+    |    xxx    |      |
+    | b: uint32 |      | --+ Data
+    +===========+    --+
+
+Transparent struct types, however, can't be reordered:
+
+Type definition:
+
+```js
+const TransparentMixedType = new StructType({a: uint8, b: uint32, c: uint8},
+                                            {transparent: true});
+```
+
+Instance memory layout:
+
+    +===========+    --+ TransparentMixedType
+    | a: uint8  |      | --+ Data
+    |    xxx    |      | --+ Padding
+    |    xxx    |      |
+    |    xxx    |      |
+    | b: uint32 |      | --+ Data
+    | c: uint8  |      | --+ Data
+    |    xxx    |      | --+ Padding
+    |    xxx    |      |
+    |    xxx    |      |
+    +===========+    --+
 
 ## Instantiation
 
@@ -352,9 +511,9 @@ let pointsCopy = PointType.array(points);
 // creating instances of `PointType` for all encountered items.
 let coercedPoints = PointType.array([new PointType(1, 2), new PointType(10, 20)]);
 // Creates an instance as a view onto the given buffer, starting at the given
-// offset and with the given length, both of which are optional.
+// byte offset and with the given length, both of which are optional.
 // This overload is only available for transparent types.
-let pointsView = PointType.array(buffer(points), 3, 3);
+let pointsView = PointType.array(buffer(points), 16, 3);
 ```
 
 ## Reading fields and elements
@@ -461,7 +620,48 @@ line.to = {x: 22, y: 44};
 line.to = {x: float64(22), y: float64(44)};
 ```
 
-### No Dynamic Properties
+### Assignment and Alignment Padding
+
+As a consequence of the rules described above, padding is left untouched when
+assigning to fields in a struct. This is relevant when assigning to a field of
+a struct that is a view onto an existing `ArrayBuffer` as
+[described below](#interacting-with-array-buffers). If the same buffer is also
+mapped as a struct with a different layout, the bytes that are padding in this
+view can be exposed as data in the other view.
+
+*Implementation Note*: that means it's not always valid to just do a memcpy
+for assignments where the rhs is a struct type instance of the same type.
+
+Consider the following type definitions:
+
+```js
+const MixedType = new StructType({a: uint8, b: uint8, c: uint32});
+const MixedPairType = new StructType(MixedType, 2);
+```
+
+`MixedType` instances contain 2 bytes of padding at offset 3, as
+[described above](#alignment-and-padding-examples).
+
+```js
+// `buffer1` is zeroed during initialization.
+let buffer1 = new ArrayBuffer(8);
+// Hence, mixedPair1.{a,b,c} are all `0`.
+let mixedPair1 = MixedPairType.view(buffer1, 0);
+
+let buffer2 = new ArrayBuffer(8);
+buffer2.fill(0xff);
+buffer2[3] === 0xff;
+buffer2[4] === 0xff;
+let mixedPair2 = MixedPairType.view(buffer2, 0);
+
+// Assign to a field that contains padding.
+mixedPair1[0] = mixedPair2;
+// These would be `0xff` if assigning to a field just did a memcpy.
+buffer1[3] === 0;
+buffer1[4] === 0;
+```
+
+## No Dynamic Properties
 
 Trying to assign to a non-existent field on a struct throws a `TypeError` instead of
 adding a dynamic property to the instance. Essentially all struct type instances behave
@@ -620,16 +820,36 @@ preexisting buffer.
 
 ## Prototypes
 
-Typed objects introduce complex hierarchies of prototypes. As for other objects, the
-`[[Prototype]]` of typed object instances is set to their constructor's `prototype`. The
-`prototype`s of all struct type definitions have `StructType.prototype` as their
-`[[Prototype]]`.
+Typed objects introduce several inheritance hierarchies. In addition to the
+prototype chains of struct type instances, there are those for the struct
+types themselves and for struct type arrays.
 
-Analogously, a struct type array has `[type constructor].array.prototype` as its
-`[[Prototype]]`, which in turn has `StructType.array.prototype` as its `[[Prototype]]`.
-Finally, `StructType.array.prototype`'s `[[Prototype]]` is set to
-`%TypedArray%.prototype`. I.e., struct type arrays extend `%TypedArray%`, just as typed
-arrays do.
+In general, just like with other objects, the `[[Prototype]]` of all involved
+instances is set to their constructor's `prototype`:
+
+For struct type definitions, that means the `[[Prototype]]` is set to
+`StructType.prototype`.
+
+For instances of a struct type `PointType`, the `[[Prototype]]` is set to
+`PointType.prototype`.
+
+Finally, for instances of a struct type array `PointType.array`, the
+`[[Prototype]]` is set to `PointType.array.prototype`.
+
+### Shared Base Constructors
+
+Analogously to typed arrays, which all inherit from
+[`%TypedArray%`](https://tc39.github.io/ecma262/#sec-%typedarray%-intrinsic-object),
+Struct types and their instances inherit from shared base constructors:
+
+The `[[Prototype]]` of `StructType.prototype` is `%Type%.prototype`, where
+`%Type%` is an intrinsic that's not directly exposed.
+
+The `[[Prototype]]` of `PointType.prototype` is `%Struct%.prototype`, where
+`%Struct%` is an intrinsic that's not directly exposed.
+
+The `[[Prototype]]` of `PointType.array.prototype` is `%Struct%.array.prototype`,
+where, again, `%Struct%` is an intrinsic that's not directly exposed.
 
 All `[[Prototype]]`s in these hierarchies are set immutably.
 
@@ -638,17 +858,21 @@ In code:
 ```js
 const PointType = new StructType({x: float64, y: float64});
 const LineType = new StructType({from: Point, to: Point});
+
 let point = new PointType();
-let points1 = new PointType.array(2);
-let points2 = new PointType.array(5);
+let points1 = PointType.array(2);
+let points2 = PointType.array(5);
 let line = new LineType();
+
 // These all yield `true`:
 point.__proto__ === PointType.prototype;
-points1.__proto__ === PointType.array.prototype;
-points2.__proto__ === points1.__proto__;
-PointType.prototype.__proto__ === StructType.prototype;
-PointType.array.prototype.__proto__ === StructType.array.prototype;
-StructType.array.prototype.__proto__ === Uint8Array.prototype.__proto__;
 line.__proto__ === LineType.prototype;
 line.from.__proto__ === PointType.prototype;
+
+points1.__proto__ === PointType.array.prototype;
+points2.__proto__ === points1.__proto__;
+
+// Pretending %Struct% is directly exposed:
+PointType.prototype.__proto__ === %Struct%.prototype;
+PointType.array.prototype.__proto__ === %Struct%.array.prototype;
 ```
