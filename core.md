@@ -133,7 +133,7 @@ all share the same nominal type and `prototype`, regardless of the length.
 
 ```js
 const PointType = new StructType({x: float64, y: float64});
-let points = PointType.array(10);
+let points = new PointType.Array(10);
 ```
 
 For the full set of overloads of the `array` method see the [section on
@@ -488,32 +488,42 @@ incomplete example object to a member that is an embedded struct.
 ### Creating struct arrays
 
 For each struct type definition, a fixed-sized typed array of instances of
-that type can be created using the type's `.array` method.
+that type can be created using the type's `.Array` constructor.
 
-Struct arrays are governed by the same canonicalization rules as structs: if two struct
-arrays are views onto the same buffer with the same offset, they're considered identical.
-While this is a deviation from how typed arrays work, it leads to less-surprising
-results. Otherwise, two struct arrays of the same type that are views onto the same
-offset of the same buffer would have different identity, while their entries would be
-canonicalized.
+In difference to structs, struct arrays aren't canonicalized. The reasons for this
+are threefold:
+1. Since struct arrays can't be embedded into structs, there aren't any questions
+around the semantics of accessing them as struct members.
+2. The canonicalization would have to include the length, increasing overhead and
+making it more difficult to reason about them: two struct arrays that're otherwise
+identical wouldn't be canonicalized if their length differs, so an object's
+identity would depend on subtle factors.
+3. Not canonicalizing typed object arrays means they behave very similarly to the
+existing typed arrays. Even if completely merging typed object arrays and typed
+arrays on the spec level isn't feasible, the desire to reduce overall language
+complexity still calls for making them behave as similar as possible.
 
-Just as typed array constructors, typed object array methods support four
+Note that struct arrays' entries *are* canonicalized between two struct arrays
+mapped onto the same underlying buffer. That follows from the fact that struct
+members are canonicalized based on their type and memory location.
+
+Just as typed array constructors, typed object array constructors support four
 different overloads:
 
 ```js
 // Make the type transparent so its buffer can be used in the last line below.
 const PointType = new StructType({x: float64, y: float64}, {transparent: true});
 // Creates an instance of length 10, with all entries initialized to default values.
-let points = PointType.array(10);
+let points = new PointType.Array(10);
 // Creates a copy of `points`, including a copy of the underlying buffer.
-let pointsCopy = PointType.array(points);
+let pointsCopy = new PointType.Array(points);
 // Creates an instance by iterating over the array-like or iterable source and
 // creating instances of `PointType` for all encountered items.
-let coercedPoints = PointType.array([new PointType(1, 2), new PointType(10, 20)]);
+let coercedPoints = new PointType.Array([new PointType(1, 2), new PointType(10, 20)]);
 // Creates an instance as a view onto the given buffer, starting at the given
 // byte offset and with the given length, both of which are optional.
 // This overload is only available for transparent types.
-let pointsView = PointType.array(buffer(points), 16, 3);
+let pointsView = new PointType.Array(buffer(points), 16, 3);
 ```
 
 ## Reading fields and elements
@@ -833,8 +843,8 @@ For struct type definitions, that means the `[[Prototype]]` is set to
 For instances of a struct type `PointType`, the `[[Prototype]]` is set to
 `PointType.prototype`.
 
-Finally, for instances of a struct type array `PointType.array`, the
-`[[Prototype]]` is set to `PointType.array.prototype`.
+Finally, for instances of a struct type array `PointType.Array`, the
+`[[Prototype]]` is set to `PointType.Array.prototype`.
 
 ### Shared Base Constructors
 
@@ -848,7 +858,7 @@ The `[[Prototype]]` of `StructType.prototype` is `%Type%.prototype`, where
 The `[[Prototype]]` of `PointType.prototype` is `%Struct%.prototype`, where
 `%Struct%` is an intrinsic that's not directly exposed.
 
-The `[[Prototype]]` of `PointType.array.prototype` is `%Struct%.array.prototype`,
+The `[[Prototype]]` of `PointType.Array.prototype` is `%Struct%.Array.prototype`,
 where, again, `%Struct%` is an intrinsic that's not directly exposed.
 
 All `[[Prototype]]`s in these hierarchies are set immutably.
@@ -860,8 +870,8 @@ const PointType = new StructType({x: float64, y: float64});
 const LineType = new StructType({from: Point, to: Point});
 
 let point = new PointType();
-let points1 = PointType.array(2);
-let points2 = PointType.array(5);
+let points1 = new PointType.Array(2);
+let points2 = new PointType.Array(5);
 let line = new LineType();
 
 // These all yield `true`:
@@ -869,10 +879,10 @@ point.__proto__ === PointType.prototype;
 line.__proto__ === LineType.prototype;
 line.from.__proto__ === PointType.prototype;
 
-points1.__proto__ === PointType.array.prototype;
+points1.__proto__ === PointType.Array.prototype;
 points2.__proto__ === points1.__proto__;
 
 // Pretending %Struct% is directly exposed:
 PointType.prototype.__proto__ === %Struct%.prototype;
-PointType.array.prototype.__proto__ === %Struct%.array.prototype;
+PointType.Array.prototype.__proto__ === %Struct%.Array.prototype;
 ```
