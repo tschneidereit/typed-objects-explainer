@@ -21,3 +21,8 @@ groups:
 **Caveat:** This set of explainers is **very much** a work in
   progress. The further down that list you go, the less consensus
   exists on the design.
+
+
+## Interested? 
+
+Join the IRC channel at #typed-objects on irc.mozilla.org (irc://irc.mozilla.org/typed-objects).
