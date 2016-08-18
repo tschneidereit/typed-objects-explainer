@@ -11,11 +11,11 @@ The explainer proceeds as follows:
 	2. [Type definitions](#type-definitions)
 		1. [Primitive type definitions](#primitive-type-definitions)
 		2. [Struct type definitions](#struct-type-definitions)
+			1. [Options](#options)
+				1. [Option: transparent](#option-transparent)
+				2. [Option: defaults](#option-defaults)
 		3. [Struct arrays](#struct-arrays)
-		4. [Options](#options)
-			1. [Option: transparent](#option-transparent)
-			2. [Option: defaults](#option-defaults)
-		5. [Examples](#examples)
+		4. [Examples](#examples)
 			1. [Standard structs](#standard-structs)
 			2. [Indexed structs](#indexed-structs)
 			3. [Nested structs](#nested-structs)
@@ -120,8 +120,23 @@ the length is determined by `length`.
 The overload is chosen depending on the second argument's type: if
 `typeof arguments[1] === 'number'`, the second overload is chosen, otherwise the first.
 
-In both cases, the optional `options` parameter, if provided, must be an
-object with fields as described in the [options section](#options).
+#### Options
+
+Both overloads support an optional `options` parameter that can influence certain aspects
+of a struct's semantics. Options are specified using fields on an object passed as the
+`options` parameter.
+
+##### Option: transparent
+
+If the `options` object contains a `transparent` field with a truthy value, instances are
+transparent, meaning it's possible to get to their underlying `ArrayBuffer`. See the
+[section on opacity](#opacity) below for details.
+
+##### Option: defaults
+
+If the `options` object contains a `defaults` field, the value of that field is used as a
+source of default values for fields of the specified type. See the [section on default
+values](#default-values) below for details.
 
 ### Struct arrays
 
@@ -138,24 +153,6 @@ let points = new PointType.Array(10);
 
 For the full set of overloads of the `array` method see the [section on
 creating struct arrays](#creating-struct-arrays) below.
-
-### Options
-
-The `options` parameter can influence certain aspects of a struct's
-semantics. Options are specified using fields on an object passed as the `options`
-parameter.
-
-#### Option: transparent
-
-If the `options` object contains a `transparent` field with a truthy value, instances are
-transparent, meaning it's possible to get to their underlying `ArrayBuffer`. See the
-[section on opacity](#opacity) below for details.
-
-#### Option: defaults
-
-If the `options` object contains a `defaults` field, the value of that field is used as a
-source of default values for fields of the specified type. See the [section on default
-values](#default-values) below for details.
 
 ### Examples
 
