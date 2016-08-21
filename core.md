@@ -155,27 +155,25 @@ struct would:
 #### Example: Indexed structs
 
 ```js
-const PointPairStruct = new StructType(PointStruct, 2);
+const FloatPairStruct = new StructType(float64, 2);
 ```
 
-This defines a new type definition `PointPairStruct` that consists of two indexed
-elements, each an instance of `PointStruct`. These will be laid out in memory consecutively,
+This defines a new type definition `FloatPairStruct` that consists of two indexed
+elements of type `float64`. These will be laid out in memory consecutively,
 just as a C struct would:
 
-    +===============+    --+ PointPairStruct
-    | 0: x: float64 |      | --+ PointStruct
-    |    y: float64 |      |
-    | 1: x: float64 |      | --+ PointStruct
-    |    y: float64 |      |
-    +===============+    --+
+    +============+ --+ FloatPairStruct
+    | 0: float64 |   | --+ float64
+    | 1: float64 |   | --+ float64
+    +============+ --+
 
 Additionally, a non-writable, non-configurable `length` property is defined on the type's prototype.
 
 An equivalent definition to this, that'd become unwieldy for large `length`s, would be:
 
 ```js
-const PointPairStruct = new StructType({0: PointStruct, 1: PointStruct});
-Object.defineProperty(PointPairStruct.prototype, 'length', {value: 2});
+const FloatPairStruct = new StructType({0: float64, 1: float64});
+Object.defineProperty(FloatPairStruct.prototype, 'length', {value: 2});
 ```
 
 #### Example: Nested structs
