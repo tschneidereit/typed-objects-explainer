@@ -14,11 +14,10 @@ The explainer proceeds as follows:
 			1. [Options](#options)
 				1. [Option: transparent](#option-transparent)
 				2. [Option: defaults](#option-defaults)
+			2. [Example: Standard structs](#example-standard-structs)
+			3. [Example: Indexed structs](#example-indexed-structs)
+			4. [Example: Nested structs](#example-nested-structs)
 		3. [Struct arrays](#struct-arrays)
-		4. [Examples](#examples)
-			1. [Standard structs](#standard-structs)
-			2. [Indexed structs](#indexed-structs)
-			3. [Nested structs](#nested-structs)
 	3. [Alignment and Padding](#alignment-and-padding)
 		1. [Alignment: Primitive Types](#alignment-primitive-types)
 		2. [Alignment: Nested Structs](#alignment-nested-structs)
@@ -138,25 +137,7 @@ If the `options` object contains a `defaults` field, the value of that field is 
 source of default values for fields of the specified type. See the [section on default
 values](#default-values) below for details.
 
-### Struct arrays
-
-In addition to the indexed structs described above, which each have their own nominal
-type and `prototype`, each struct type has an accompanying `array` method which
-can be used to create fixed-sized typed arrays of elements of the struct's type.
-Just as for the existing typed arrays such as `Uint8Array`, instances of these arrays
-all share the same nominal type and `prototype`, regardless of the length.
-
-```js
-const PointStruct = new StructType({x: float64, y: float64});
-let points = new PointStruct.Array(10);
-```
-
-For the full set of overloads of the `array` method see the [section on
-creating struct arrays](#creating-struct-arrays) below.
-
-### Examples
-
-#### Standard structs
+#### Example: Standard structs
 
 ```js
 const PointStruct = new StructType({x: float64, y: float64});
@@ -171,7 +152,7 @@ struct would:
     | y: float64 |      |
     +============+    --+
 
-#### Indexed structs
+#### Example: Indexed structs
 
 ```js
 const PointPairStruct = new StructType(PointStruct, 2);
@@ -197,7 +178,7 @@ const PointPairStruct = new StructType({0: PointStruct, 1: PointStruct});
 Object.defineProperty(PointPairStruct.prototype, 'length', {value: 2});
 ```
 
-#### Nested structs
+#### Example: Nested structs
 
 Struct types can embed other struct types both as indexed elements as above and as named fields:
 
@@ -240,6 +221,22 @@ The typed objects approach of embedding types within one another by
 default can save a significant amount of memory, particularly if you
 have a large number of lines embedded in an array. It also
 improves cache behavior since the data is contiguous in memory.
+
+### Struct arrays
+
+In addition to the indexed structs described above, which each have their own nominal
+type and `prototype`, each struct type has an accompanying `array` method which
+can be used to create fixed-sized typed arrays of elements of the struct's type.
+Just as for the existing typed arrays such as `Uint8Array`, instances of these arrays
+all share the same nominal type and `prototype`, regardless of the length.
+
+```js
+const PointStruct = new StructType({x: float64, y: float64});
+let points = new PointStruct.Array(10);
+```
+
+For the full set of overloads of the `array` method see the [section on
+creating struct arrays](#creating-struct-arrays) below.
 
 ## Alignment and Padding
 
