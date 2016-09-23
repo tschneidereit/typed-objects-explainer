@@ -11,14 +11,13 @@ The explainer proceeds as follows:
 	2. [Type definitions](#type-definitions)
 		1. [Primitive type definitions](#primitive-type-definitions)
 		2. [Struct type definitions](#struct-type-definitions)
+			1. [Options](#options)
+				1. [Option: transparent](#option-transparent)
+				2. [Option: defaults](#option-defaults)
+			2. [Example: Standard structs](#example-standard-structs)
+			3. [Example: Indexed structs](#example-indexed-structs)
+			4. [Example: Nested structs](#example-nested-structs)
 		3. [Struct arrays](#struct-arrays)
-		4. [Options](#options)
-			1. [Option: transparent](#option-transparent)
-			2. [Option: defaults](#option-defaults)
-		5. [Examples](#examples)
-			1. [Standard structs](#standard-structs)
-			2. [Indexed structs](#indexed-structs)
-			3. [Nested structs](#nested-structs)
 	3. [Alignment and Padding](#alignment-and-padding)
 		1. [Alignment: Primitive Types](#alignment-primitive-types)
 		2. [Alignment: Nested Structs](#alignment-nested-structs)
@@ -120,101 +119,78 @@ the length is determined by `length`.
 The overload is chosen depending on the second argument's type: if
 `typeof arguments[1] === 'number'`, the second overload is chosen, otherwise the first.
 
-In both cases, the optional `options` parameter, if provided, must be an
-object with fields as described in the [options section](#options).
+#### Options
 
-### Struct arrays
+Both overloads support an optional `options` parameter that can influence certain aspects
+of a struct's semantics. Options are specified using fields on an object passed as the
+`options` parameter.
 
-In addition to the indexed structs described above, which each have their own nominal
-type and `prototype`, each struct type has an accompanying `array` method which
-can be used to create fixed-sized typed arrays of elements of the struct's type.
-Just as for the existing typed arrays such as `Uint8Array`, instances of these arrays
-all share the same nominal type and `prototype`, regardless of the length.
-
-```js
-const PointType = new StructType({x: float64, y: float64});
-let points = new PointType.Array(10);
-```
-
-For the full set of overloads of the `array` method see the [section on
-creating struct arrays](#creating-struct-arrays) below.
-
-### Options
-
-The `options` parameter can influence certain aspects of a struct's
-semantics. Options are specified using fields on an object passed as the `options`
-parameter.
-
-#### Option: transparent
+##### Option: transparent
 
 If the `options` object contains a `transparent` field with a truthy value, instances are
 transparent, meaning it's possible to get to their underlying `ArrayBuffer`. See the
 [section on opacity](#opacity) below for details.
 
-#### Option: defaults
+##### Option: defaults
 
 If the `options` object contains a `defaults` field, the value of that field is used as a
 source of default values for fields of the specified type. See the [section on default
 values](#default-values) below for details.
 
-### Examples
-
-#### Standard structs
+#### Example: Standard structs
 
 ```js
-const PointType = new StructType({x: float64, y: float64});
+const PointStruct = new StructType({x: float64, y: float64});
 ```
 
-This defines a new type definition `PointType` that consists of two
+This defines a new type definition `PointStruct` that consists of two
 floats. These will be laid out in memory consecutively, just as a C
 struct would:
 
-    +============+    --+ PointType
+    +============+    --+ PointStruct
     | x: float64 |      |
     | y: float64 |      |
     +============+    --+
 
-#### Indexed structs
+#### Example: Indexed structs
 
 ```js
-const PointPairType = new StructType(PointType, 2);
+const FloatPairStruct = new StructType(float64, 2);
 ```
 
-This defines a new type definition `PointPairType` that consists of two indexed
-elements, each an instance of `PointType`. These will be laid out in memory consecutively,
+This defines a new type definition `FloatPairStruct` that consists of two indexed
+elements of type `float64`. These will be laid out in memory consecutively,
 just as a C struct would:
 
-    +===============+    --+ PointPairType
-    | 0: x: float64 |      | --+ PointType
-    |    y: float64 |      |
-    | 1: x: float64 |      | --+ PointType
-    |    y: float64 |      |
-    +===============+    --+
+    +============+ --+ FloatPairStruct
+    | 0: float64 |   | --+ float64
+    | 1: float64 |   | --+ float64
+    +============+ --+
 
 Additionally, a non-writable, non-configurable `length` property is defined on the type's prototype.
 
 An equivalent definition to this, that'd become unwieldy for large `length`s, would be:
 
 ```js
-const PointPairType = new StructType({0: PointType, 1: PointType});
-Object.defineProperty(PointPairType.prototype, 'length', {value: 2});
+const FloatPairStruct = new StructType({0: float64, 1: float64});
+Object.defineProperty(FloatPairStruct.prototype, 'length', {value: 2});
 ```
 
-#### Nested structs
+#### Example: Nested structs
 
 Struct types can embed other struct types both as indexed elements as above and as named fields:
 
 ```js
-const LineType = new StructType({from: PointType, to: PointType});
+const LineStruct = new StructType({from: PointStruct, to: PointStruct});
 ```
 
 The result is a structure that contains two points embedded (again,
 just as you would get in C):
 
-    +==================+    --+ LineType
-    | from: x: float64 |      | --+ PointType
+    +==================+    --+ LineStruct
+    | from: x: float64 |      | --+ PointStruct
     |       y: float64 |      |
-    | to:   x: float64 |      | --+ PointType
+    | to:   x: float64 |      | --+ PointStruct
     |       y: float64 |      |
     +==================+    --+
 
@@ -243,6 +219,22 @@ The typed objects approach of embedding types within one another by
 default can save a significant amount of memory, particularly if you
 have a large number of lines embedded in an array. It also
 improves cache behavior since the data is contiguous in memory.
+
+### Struct arrays
+
+In addition to the indexed structs described above, which each have their own nominal
+type and `prototype`, each struct type has an accompanying `array` method which
+can be used to create fixed-sized typed arrays of elements of the struct's type.
+Just as for the existing typed arrays such as `Uint8Array`, instances of these arrays
+all share the same nominal type and `prototype`, regardless of the length.
+
+```js
+const PointStruct = new StructType({x: float64, y: float64});
+let points = new PointStruct.Array(10);
+```
+
+For the full set of overloads of the `array` method see the [section on
+creating struct arrays](#creating-struct-arrays) below.
 
 ## Alignment and Padding
 
@@ -304,12 +296,12 @@ the same length don't require any padding:
 Type definition:
 
 ```js
-const PointType = new StructType({x: float64, y: float64});
+const PointStruct = new StructType({x: float64, y: float64});
 ```
 
 Instance memory layout:
 
-    +============+    --+ PointType
+    +============+    --+ PointStruct
     | x: float64 |      |
     | y: float64 |      |
     +============+    --+
@@ -318,15 +310,15 @@ Instance memory layout:
 Type definition:
 
 ```js
-const PointPairType = new StructType(PointType, 2);
+const PointPairStruct = new StructType(PointStruct, 2);
 ```
 
 Instance memory layout:
 
-    +===============+    --+ PointPairType
-    | 0: x: float64 |      | --+ PointType
+    +===============+    --+ PointPairStruct
+    | 0: x: float64 |      | --+ PointStruct
     |    y: float64 |      |
-    | 1: x: float64 |      | --+ PointType
+    | 1: x: float64 |      | --+ PointStruct
     |    y: float64 |      |
     +===============+    --+
 
@@ -335,12 +327,12 @@ For struct types with fields on non-uniform length, padding is required:
 Type definition:
 
 ```js
-const MixedType = new StructType({a: uint8, b: uint8, c: uint32});
+const MixedStruct = new StructType({a: uint8, b: uint8, c: uint32});
 ```
 
 Instance memory layout:
 
-    +===========+    --+ MixedType
+    +===========+    --+ MixedStruct
     | a: uint8  |      | --+ Data
     | b: uint8  |      | --+ Data
     |    xxx    |      | --+ Padding
@@ -358,12 +350,12 @@ for all fields, reordering can still be useful to combine and reduce padding:
 Type definition:
 
 ```js
-const OpaqueMixedType = new StructType({a: uint8, b: uint32, c: uint8});
+const OpaqueMixedStruct = new StructType({a: uint8, b: uint32, c: uint8});
 ```
 
 Instance memory layout:
 
-    +===========+    --+ OpaqueMixedType
+    +===========+    --+ OpaqueMixedStruct
     | a: uint8  |      | --+ Data
     | c: uint8  |      | --+ Data
     |    xxx    |      | --+ Padding
@@ -376,13 +368,13 @@ Transparent struct types, however, can't be reordered:
 Type definition:
 
 ```js
-const TransparentMixedType = new StructType({a: uint8, b: uint32, c: uint8},
-                                            {transparent: true});
+const TransparentMixedStruct = new StructType({a: uint8, b: uint32, c: uint8},
+                                              {transparent: true});
 ```
 
 Instance memory layout:
 
-    +===========+    --+ TransparentMixedType
+    +===========+    --+ TransparentMixedStruct
     | a: uint8  |      | --+ Data
     |    xxx    |      | --+ Padding
     |    xxx    |      |
@@ -402,14 +394,14 @@ You can create an instance of a struct type using the `new`
 operator:
 
 ```js
-const PointType = new StructType({x: float64, y: float64});
-const LineType = new StructType({from: PointType, to: PointType});
-let line = new LineType();
+const PointStruct = new StructType({x: float64, y: float64});
+const LineStruct = new StructType({from: PointStruct, to: PointStruct});
+let line = new LineStruct();
 console.log(line.from.x); // logs 0
 ```
 
 The resulting object is called a *typed object*: it will have the
-fields specified in `LineType`. Each field will be initialized to an
+fields specified in `LineStruct`. Each field will be initialized to an
 appropriate default value based on its type (e.g., numbers are
 initialized to 0, fields of type `any` are initialized to `undefined`,
 and so on). Fields with structural type (like `from` and `to` in this
@@ -420,11 +412,11 @@ object". This object will be used to extract the initial values for
 each field:
 
 ```js
-let line1 = new LineType({from: {x: 1, y: 2},
+let line1 = new LineStruct({from: {x: 1, y: 2},
                           to: {x: 3, y: 4}});
 console.log(line1.from.x); // logs 1
 
-let line2 = new LineType(line1);
+let line2 = new LineStruct(line1);
 console.log(line2.from.x); // also logs 1
 ```
 
@@ -433,13 +425,13 @@ object or another typed object. The only requirement is that it have
 fields of the appropriate type. Essentially, writing:
 
 ```js
-let line1 = new LineType(example);
+let line1 = new LineStruct(example);
 ```
 
 is exactly equivalent to writing:
 
 ```js
-let line1 = new LineType();
+let line1 = new LineStruct();
 line1.from.x = example.from.x;
 line1.from.y = example.from.y;
 line1.from.x = example.to.x;
@@ -461,15 +453,15 @@ object, only the missing fields are set to the overridden default values - again
 for builtin defaults.
 
 ```js
-const PointType = new StructType({x: float64, y: float64});
+const PointStruct = new StructType({x: float64, y: float64});
 let defaults = {
-  topLeft: new PointType({x: Number.NEGATIVE_INFINITY, y: Number.NEGATIVE_INFINITY}),
+  topLeft: new PointStruct({x: Number.NEGATIVE_INFINITY, y: Number.NEGATIVE_INFINITY}),
   bottomRight: {x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY}
 };
-const RectangleType = new StructType({topLeft: PointType, bottomRight: PointType},
+const RectangleStruct = new StructType({topLeft: PointStruct, bottomRight: PointStruct},
                                    {defaults: defaults});
 // Instantiate from a source object with one partially and one entirely missing field:
-let rect1 = new RectangleType({topLeft: {x: 10}});
+let rect1 = new RectangleStruct({topLeft: {x: 10}});
 rect1.topLeft.x === 10;
 rect1.topLeft.y === Number.NEGATIVE_INFINITY;
 rect1.bottomRight.x === Number.POSITIVE_INFINITY;
@@ -512,18 +504,18 @@ different overloads:
 
 ```js
 // Make the type transparent so its buffer can be used in the last line below.
-const PointType = new StructType({x: float64, y: float64}, {transparent: true});
+const PointStruct = new StructType({x: float64, y: float64}, {transparent: true});
 // Creates an instance of length 10, with all entries initialized to default values.
-let points = new PointType.Array(10);
+let points = new PointStruct.Array(10);
 // Creates a copy of `points`, including a copy of the underlying buffer.
-let pointsCopy = new PointType.Array(points);
+let pointsCopy = new PointStruct.Array(points);
 // Creates an instance by iterating over the array-like or iterable source and
-// creating instances of `PointType` for all encountered items.
-let coercedPoints = new PointType.Array([new PointType(1, 2), new PointType(10, 20)]);
+// creating instances of `PointStruct` for all encountered items.
+let coercedPoints = new PointStruct.Array([new PointStruct(1, 2), new PointStruct(10, 20)]);
 // Creates an instance as a view onto the given buffer, starting at the given
 // byte offset and with the given length, both of which are optional.
 // This overload is only available for transparent types.
-let pointsView = new PointType.Array(buffer(points), 16, 3);
+let pointsView = new PointStruct.Array(buffer(points), 16, 3);
 ```
 
 ## Reading fields and elements
@@ -534,7 +526,7 @@ then the result is a new typed object pointer that points into the same
 backing buffer as before. Therefore, this fragment of code:
 
 ```js
-let line1 = new LineType({from: {x: 1, y: 2},
+let line1 = new LineStruct({from: {x: 1, y: 2},
                           to: {x: 3, y: 4}});
 let toPoint = line1.to;
 ```
@@ -568,14 +560,14 @@ have an array of structs, then the result is a new typed object pointing into
 the same buffer, just as when accessing a struct field:
 
 ```js
-const ColorType = new StructType({r: uint8, g: uint8,
+const ColorStruct = new StructType({r: uint8, g: uint8,
                                   b: uint8, a: uint8});
-const ColumnType = new StructType(ColorType, 1024);
-const ImageType = new StructType(ColumnType, 768);
+const ColumnStruct = new StructType(ColorStruct, 1024);
+const ImageStruct = new StructType(ColumnStruct, 768);
 
-let image = new ImageType();
-image[22] // yields a typed object of type ColumnType
-image[22][44] // yields a typed object of type ColorType
+let image = new ImageStruct();
+image[22] // yields a typed object of type ColumnStruct
+image[22][44] // yields a typed object of type ColorStruct
 image[22][44].r // yields a number
 ```
 
@@ -589,7 +581,7 @@ As long as the rhs has the required structure, the process is precisely the same
 providing an initial value for a typed object. This means that you can write things like:
 
 ```js
-let line = new LineType();
+let line = new LineStruct();
 line.to = {x: 22, y: 44};
 console.log(line.from.x); // prints 0
 console.log(line.to.x); // prints 22
@@ -600,7 +592,7 @@ When assigning to a field that has a struct type, the assigned value must be an 
 properties the target field's type has; otherwise, a `TypeError` is thrown:
 
 ```js
-let line = new LineType();
+let line = new LineStruct();
 line.to = {x: 22, y: 44}; // Ok.
 line.to = {x: 22, y: 44, z: 88}; // Ok.
 line.to = {x: 22}; // Throws.
@@ -645,24 +637,24 @@ for assignments where the rhs is a struct type instance of the same type.
 Consider the following type definitions:
 
 ```js
-const MixedType = new StructType({a: uint8, b: uint8, c: uint32});
-const MixedPairType = new StructType(MixedType, 2);
+const MixedStruct = new StructType({a: uint8, b: uint8, c: uint32});
+const MixedPairStruct = new StructType(MixedStruct, 2);
 ```
 
-`MixedType` instances contain 2 bytes of padding at offset 3, as
+`MixedStruct` instances contain 2 bytes of padding at offset 3, as
 [described above](#alignment-and-padding-examples).
 
 ```js
 // `buffer1` is zeroed during initialization.
 let buffer1 = new ArrayBuffer(8);
 // Hence, mixedPair1.{a,b,c} are all `0`.
-let mixedPair1 = MixedPairType.view(buffer1, 0);
+let mixedPair1 = MixedPairStruct.view(buffer1, 0);
 
 let buffer2 = new ArrayBuffer(8);
 buffer2.fill(0xff);
 buffer2[3] === 0xff;
 buffer2[4] === 0xff;
-let mixedPair2 = MixedPairType.view(buffer2, 0);
+let mixedPair2 = MixedPairStruct.view(buffer2, 0);
 
 // Assign to a field that contains padding.
 mixedPair1[0] = mixedPair2;
@@ -692,7 +684,7 @@ Conceptually at least, every typed object is actually a *view* onto an
 create a line like:
 
 ```js
-let line1 = new LineType({from: {x: 1, y: 2},
+let line1 = new LineStruct({from: {x: 1, y: 2},
                           to: {x: 3, y: 4}});
 ```
 
@@ -724,7 +716,7 @@ field has a struct type. Based on this, you might wonder what happens if you
 access the same field twice in a row:
 
 ```js
-let line = new LineType({from: {x: 1, y: 2},
+let line = new LineStruct({from: {x: 1, y: 2},
                          to: {x: 3, y: 4}});
 let toPoint1 = line.to;
 let toPoint2 = line.to;
@@ -769,7 +761,7 @@ themselves, it can be achieved using the `view` method on the type definition:
 
 ```js
 let buffer = new ArrayBuffer(...);
-let line = LineType.view(buffer, offset);
+let line = LineStruct.view(buffer, offset);
 ```
 
 Note that this only works for transparent struct type definitions. See [the following section on opacity](#opacity) for details.
@@ -795,12 +787,12 @@ Sometimes, though, it's useful to allow accessing the underlying buffer. This ca
 enabled on a per-type basis using the `transparent` option:
 
 ```js
-const PointType = new StructType({x: float64, y: float64}, {transparent: true});
-const PointPairType = new StructType(PointType, 2, {transparent: true});
-const LineType = new StructType({from: PointType, to: PointType}, {transparent: true});
-let pointPair = new PointPairType({x: 10, y: 10}, {x: 20, y: 20});
-let line = LineType.view(buffer(pointPair), offset(pointPair));
-let toPoint = PointType.view(buffer(line), offset(pointPair[1]));
+const PointStruct = new StructType({x: float64, y: float64}, {transparent: true});
+const PointPairStruct = new StructType(PointStruct, 2, {transparent: true});
+const LineStruct = new StructType({from: PointStruct, to: PointStruct}, {transparent: true});
+let pointPair = new PointPairStruct({x: 10, y: 10}, {x: 20, y: 20});
+let line = LineStruct.view(buffer(pointPair), offset(pointPair));
+let toPoint = PointStruct.view(buffer(line), offset(pointPair[1]));
 let floatsList = new Float64Array(buffer(line));
 
 // These all yield true:
@@ -840,11 +832,11 @@ instances is set to their constructor's `prototype`:
 For struct type definitions, that means the `[[Prototype]]` is set to
 `StructType.prototype`.
 
-For instances of a struct type `PointType`, the `[[Prototype]]` is set to
-`PointType.prototype`.
+For instances of a struct type `PointStruct`, the `[[Prototype]]` is set to
+`PointStruct.prototype`.
 
-Finally, for instances of a struct type array `PointType.Array`, the
-`[[Prototype]]` is set to `PointType.Array.prototype`.
+Finally, for instances of a struct type array `PointStruct.Array`, the
+`[[Prototype]]` is set to `PointStruct.Array.prototype`.
 
 ### Shared Base Constructors
 
@@ -855,10 +847,10 @@ Struct types and their instances inherit from shared base constructors:
 The `[[Prototype]]` of `StructType.prototype` is `%Type%.prototype`, where
 `%Type%` is an intrinsic that's not directly exposed.
 
-The `[[Prototype]]` of `PointType.prototype` is `%Struct%.prototype`, where
+The `[[Prototype]]` of `PointStruct.prototype` is `%Struct%.prototype`, where
 `%Struct%` is an intrinsic that's not directly exposed.
 
-The `[[Prototype]]` of `PointType.Array.prototype` is `%Struct%.Array.prototype`,
+The `[[Prototype]]` of `PointStruct.Array.prototype` is `%Struct%.Array.prototype`,
 where, again, `%Struct%` is an intrinsic that's not directly exposed.
 
 All `[[Prototype]]`s in these hierarchies are set immutably.
@@ -866,23 +858,23 @@ All `[[Prototype]]`s in these hierarchies are set immutably.
 In code:
 
 ```js
-const PointType = new StructType({x: float64, y: float64});
-const LineType = new StructType({from: Point, to: Point});
+const PointStruct = new StructType({x: float64, y: float64});
+const LineStruct = new StructType({from: Point, to: Point});
 
-let point = new PointType();
-let points1 = new PointType.Array(2);
-let points2 = new PointType.Array(5);
-let line = new LineType();
+let point = new PointStruct();
+let points1 = new PointStruct.Array(2);
+let points2 = new PointStruct.Array(5);
+let line = new LineStruct();
 
 // These all yield `true`:
-point.__proto__ === PointType.prototype;
-line.__proto__ === LineType.prototype;
-line.from.__proto__ === PointType.prototype;
+point.__proto__ === PointStruct.prototype;
+line.__proto__ === LineStruct.prototype;
+line.from.__proto__ === PointStruct.prototype;
 
-points1.__proto__ === PointType.Array.prototype;
+points1.__proto__ === PointStruct.Array.prototype;
 points2.__proto__ === points1.__proto__;
 
 // Pretending %Struct% is directly exposed:
-PointType.prototype.__proto__ === %Struct%.prototype;
-PointType.Array.prototype.__proto__ === %Struct%.Array.prototype;
+PointStruct.prototype.__proto__ === %Struct%.prototype;
+PointStruct.Array.prototype.__proto__ === %Struct%.Array.prototype;
 ```
