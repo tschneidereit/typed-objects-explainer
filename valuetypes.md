@@ -185,7 +185,7 @@ distinct sets of value types. This means you can freely add methods to
 value types that you define without fear of stomping on somebody
 else's value type.
 
-On the other hand, if libraries with to interoperate, they can do so
+On the other hand, if libraries wish to interoperate, they can do so
 via the symbol registry. Similarly, value types that should be
 equivalent across realms can be achieved using the global symbol
 registry.

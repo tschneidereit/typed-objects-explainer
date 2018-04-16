@@ -8,7 +8,6 @@ groups:
 - [Value types](valuetypes.md) defines an extension to the core
   proposal to support new kinds of values, akin to numbers and
   strings.
-- [SIMD](simd.md) defines how the proposed SIMD spec fits into all this.
 - [OO types](ootypes.md) defines an extension to allow
   typed objects to (more) accurately describe the kinds of
   things one can describe in Java or C#.
@@ -23,6 +22,6 @@ groups:
   exists on the design.
 
 
-## Interested? 
+## Interested?
 
 Join the IRC channel at #typed-objects on irc.mozilla.org (irc://irc.mozilla.org/typed-objects).

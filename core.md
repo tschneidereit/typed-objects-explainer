@@ -101,7 +101,7 @@ definitions: either *primitive* or *struct type definitions*.
 
 #### Options
 
-Tje optional `options` parameter can influence certain aspects of a struct's semantics.
+The optional `options` parameter can influence certain aspects of a struct's semantics.
 Options are specified using fields on an object passed as the `options` parameter.
 
 ##### Option: defaults
@@ -358,7 +358,7 @@ throws a `TypeError`.
 ## Assigning fields
 
 When you assign to a field, the backing store is modified accordingly.
-As long as the rhs has the required structure, the process is precisely the same as when
+As long as the right hand side has the required structure, the process is precisely the same as when
 providing an initial value for a typed object. This means that you can write things like:
 
 ```js
@@ -382,7 +382,7 @@ line.to = {x: 22}; // Throws.
 The rationale for this behavior is that both alternatives - leaving absent fields
 unchanged or resetting them to their default values - are very likely to cover up
 subtle bugs. This is especially true when gradually converting an existing code base
-to using typed objects. OTOH, ignoring additional fields on the source object doesn't
+to using typed objects. On the other hand, ignoring additional fields on the source object doesn't
 have the same issues: all fields on the target instance are set to predictable values.
 
 If a field has primitive type, then when it is assigned, the value is
@@ -410,7 +410,7 @@ adding a dynamic property to the instance. Essentially all struct type instances
 as though `Object.preventExtensions()` had been invoked on them.
 
 *Rationale*: The canonicalization rules described
-[below](#canonicalization-of-typed-objects--equality) mean that structs don't have a way
+[below](#canonicalization-of-typed-objects-and-equality) mean that structs don't have a way
 to add dynamic properties to them: they would have to be associated with the starting
 offset of the struct in the underlying buffer because the struct itself is just a fat pointer
 to that location. Only for structs that are not embedded in other structs would it be
